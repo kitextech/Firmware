@@ -1,0 +1,12 @@
+two Rotor mixer
+============================
+
+This file defines a mixer for the TwoRotor quad. This mixer generates 4 PWM outputs
+on the main PWM output port, two at 400Hz for the motors.
+
+Motor mixer
+------------
+Channel 1 connects to the right (starboard) motor.
+Channel 2 connects to the left (port) motor.
+
+R: 2- 10000 10000 10000 0

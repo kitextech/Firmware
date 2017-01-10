@@ -182,7 +182,7 @@ set(config_module_list
 	#examples/fixedwing_control
 
 	# Hardware test
-	#examples/hwtest
+	examples/hwtest
 
 	# EKF
 	examples/ekf_att_pos_estimator

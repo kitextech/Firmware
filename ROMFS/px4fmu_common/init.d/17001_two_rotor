@@ -1,0 +1,18 @@
+#!nsh
+#
+# @name Two Rotor MC
+#
+# @type Quadrotor +
+#
+# @output MAIN1 motor left
+# @output MAIN2 motor right
+
+#
+# @maintainer Andreas Okholm <aokholm@gmail.com>
+#
+
+sh /etc/init.d/rc.mc_defaults
+
+set MIXER two_rotor
+
+set PWM_OUT 1234
