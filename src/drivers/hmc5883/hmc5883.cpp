@@ -140,6 +140,11 @@ public:
 	virtual int		ioctl(struct file *filp, int cmd, unsigned long arg);
 
 	/**
+	 * Stop the automatic measurement state machine.
+	 */
+	void			stop();
+
+	/**
 	 * Diagnostics - print some basic information about the driver.
 	 */
 	void			print_info();
@@ -187,11 +192,6 @@ private:
 	 *       to make it more aggressive about resetting the bus in case of errors.
 	 */
 	void			start();
-
-	/**
-	 * Stop the automatic measurement state machine.
-	 */
-	void			stop();
 
 	/**
 	 * Reset the device
@@ -370,6 +370,10 @@ HMC5883::HMC5883(device::Device *interface, const char *path, enum Rotation rota
 	_temperature_counter(0),
 	_temperature_error_count(0)
 {
+	// set the device type from the interface
+	_device_id.devid_s.bus_type = _interface->get_device_bus_type();
+	_device_id.devid_s.bus = _interface->get_device_bus();
+	_device_id.devid_s.address = _interface->get_device_address();
 	_device_id.devid_s.devtype = DRV_MAG_DEVTYPE_HMC5883;
 
 	// enable debug() calls
@@ -758,9 +762,6 @@ HMC5883::ioctl(struct file *filp, int cmd, unsigned long arg)
 	case MAGIOCSTEMPCOMP:
 		return set_temperature_compensation(arg);
 
-	case DEVIOCGDEVICEID:
-		return _interface->ioctl(cmd, dummy);
-
 	default:
 		/* give it to the superclass */
 		return CDev::ioctl(filp, cmd, arg);
@@ -781,7 +782,11 @@ HMC5883::start()
 void
 HMC5883::stop()
 {
-	work_cancel(HPWORK, &_work);
+	if (_measure_ticks > 0) {
+		/* ensure no new items are queued while we cancel this one */
+		_measure_ticks = 0;
+		work_cancel(HPWORK, &_work);
+	}
 }
 
 int
@@ -802,6 +807,10 @@ HMC5883::cycle_trampoline(void *arg)
 void
 HMC5883::cycle()
 {
+	if (_measure_ticks == 0) {
+		return;
+	}
+
 	/* collection phase? */
 	if (_collect_phase) {
 
@@ -840,12 +849,14 @@ HMC5883::cycle()
 	/* next phase is collection */
 	_collect_phase = true;
 
-	/* schedule a fresh cycle call when the measurement is done */
-	work_queue(HPWORK,
-		   &_work,
-		   (worker_t)&HMC5883::cycle_trampoline,
-		   this,
-		   USEC2TICK(HMC5883_CONVERSION_INTERVAL));
+	if (_measure_ticks > 0) {
+		/* schedule a fresh cycle call when the measurement is done */
+		work_queue(HPWORK,
+			   &_work,
+			   (worker_t)&HMC5883::cycle_trampoline,
+			   this,
+			   USEC2TICK(HMC5883_CONVERSION_INTERVAL));
+	}
 }
 
 int
@@ -1281,8 +1292,6 @@ int HMC5883::check_calibration()
 	bool scale_valid  = (check_scale() == OK);
 
 	if (_calibrated != (offset_valid && scale_valid)) {
-		warnx("mag cal status changed %s%s", (scale_valid) ? "" : "scale invalid ",
-		      (offset_valid) ? "" : "offset invalid");
 		_calibrated = (offset_valid && scale_valid);
 	}
 
@@ -1445,6 +1454,12 @@ struct hmc5883_bus_option {
 	HMC5883	*dev;
 } bus_options[] = {
 	{ HMC5883_BUS_I2C_EXTERNAL, "/dev/hmc5883_ext", &HMC5883_I2C_interface, PX4_I2C_BUS_EXPANSION, NULL },
+#ifdef PX4_I2C_BUS_EXPANSION1
+	{ HMC5883_BUS_I2C_EXTERNAL, "/dev/hmc5883_ext1", &HMC5883_I2C_interface, PX4_I2C_BUS_EXPANSION1, NULL },
+#endif
+#ifdef PX4_I2C_BUS_EXPANSION2
+	{ HMC5883_BUS_I2C_EXTERNAL, "/dev/hmc5883_ext2", &HMC5883_I2C_interface, PX4_I2C_BUS_EXPANSION2, NULL },
+#endif
 #ifdef PX4_I2C_BUS_ONBOARD
 	{ HMC5883_BUS_I2C_INTERNAL, "/dev/hmc5883_int", &HMC5883_I2C_interface, PX4_I2C_BUS_ONBOARD, NULL },
 #endif
@@ -1455,6 +1470,7 @@ struct hmc5883_bus_option {
 #define NUM_BUS_OPTIONS (sizeof(bus_options)/sizeof(bus_options[0]))
 
 void	start(enum HMC5883_BUS busid, enum Rotation rotation);
+int		stop();
 bool	start_bus(struct hmc5883_bus_option &bus, enum Rotation rotation);
 struct hmc5883_bus_option &find_bus(enum HMC5883_BUS busid);
 void	test(enum HMC5883_BUS busid);
@@ -1478,7 +1494,7 @@ start_bus(struct hmc5883_bus_option &bus, enum Rotation rotation)
 
 	if (interface->init() != OK) {
 		delete interface;
-		warnx("no device on bus %u", (unsigned)bus.busid);
+		warnx("no device on bus %u (type: %u)", (unsigned)bus.busnum, (unsigned)bus.busid);
 		return false;
 	}
 
@@ -1535,6 +1551,23 @@ start(enum HMC5883_BUS busid, enum Rotation rotation)
 	if (!started) {
 		exit(1);
 	}
+}
+
+int
+stop()
+{
+	bool stopped = false;
+
+	for (unsigned i = 0; i < NUM_BUS_OPTIONS; i++) {
+		if (bus_options[i].dev != nullptr) {
+			bus_options[i].dev->stop();
+			delete bus_options[i].dev;
+			bus_options[i].dev = nullptr;
+			stopped = true;
+		}
+	}
+
+	return !stopped;
 }
 
 /**
@@ -1837,6 +1870,13 @@ hmc5883_main(int argc, char *argv[])
 		}
 
 		exit(0);
+	}
+
+	/*
+	 * Stop the driver
+	 */
+	if (!strcmp(verb, "stop")) {
+		return hmc5883::stop();
 	}
 
 	/*

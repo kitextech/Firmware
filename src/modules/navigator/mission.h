@@ -91,7 +91,7 @@ public:
 		MISSION_YAWMODE_BACK_TO_HOME = 3,
 		MISSION_YAWMODE_MAX = 4
 	};
-	
+
 	bool set_current_offboard_mission_index(unsigned index);
 
 	unsigned find_offboard_land_start();
@@ -120,7 +120,7 @@ private:
 	/**
 	 * Returns true if we need to do a takeoff at the current state
 	 */
-	bool do_need_takeoff();
+	bool do_need_vertical_takeoff();
 
 	/**
 	 * Returns true if we need to move to waypoint location before starting descent
@@ -163,6 +163,11 @@ private:
 	void altitude_sp_foh_reset();
 
 	/**
+	 * Update the cruising speed setpoint.
+	 */
+	void cruising_speed_sp_update();
+
+	/**
 	 * Abort landing
 	 */
 	void do_abort_landing();
@@ -176,7 +181,7 @@ private:
 	 * @return true if current mission item available
 	 */
 	bool prepare_mission_items(bool onboard, struct mission_item_s *mission_item,
-		struct mission_item_s *next_position_mission_item, bool *has_next_position_item);
+				   struct mission_item_s *next_position_mission_item, bool *has_next_position_item);
 
 	/**
 	 * Read current (offset == 0) or a specific (offset > 0) mission item
@@ -227,6 +232,11 @@ private:
 	 */
 	bool need_to_reset_mission(bool active);
 
+	/**
+	 * Project current location with heading to far away location and fill setpoint.
+	 */
+	void generate_waypoint_from_heading(struct position_setpoint_s *setpoint, float yaw);
+
 	control::BlockParamInt _param_onboard_enabled;
 	control::BlockParamFloat _param_takeoff_alt;
 	control::BlockParamFloat _param_dist_1wp;
@@ -269,7 +279,6 @@ private:
 		WORK_ITEM_TYPE_TRANSITON_BEFORE_LAND,	/**<  */
 		WORK_ITEM_TYPE_MOVE_TO_LAND_AFTER_TRANSITION	/**<  */
 	} _work_item_type;	/**< current type of work to do (sub mission item) */
-
 };
 
 #endif

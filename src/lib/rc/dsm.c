@@ -51,7 +51,7 @@
 #include "dsm.h"
 #include <drivers/drv_hrt.h>
 
-#if defined (__PX4_LINUX) || defined (__PX4_DARWIN)
+#if defined (__PX4_LINUX) || defined (__PX4_DARWIN) || defined(__PX4_QURT)
 #define dsm_udelay(arg) usleep(arg)
 #else
 #include <nuttx/arch.h>
@@ -305,6 +305,16 @@ dsm_init(const char *device)
 	}
 }
 
+void
+dsm_deinit()
+{
+	if (dsm_fd >= 0) {
+		close(dsm_fd);
+	}
+
+	dsm_fd = -1;
+}
+
 #ifdef GPIO_SPEKTRUM_PWR_EN
 /**
  * Handle DSM satellite receiver bind mode handler
@@ -508,7 +518,7 @@ dsm_decode(hrt_abstime frame_time, uint16_t *values, uint16_t *num_values, bool 
 #ifdef DSM_DEBUG
 			printf("DSM: VALUE RANGE FAIL: %d: %d\n", (int)i, (int)values[i]);
 #endif
-			dsm_chan_count = 0;
+			*num_values = 0;
 			return false;
 		}
 	}
@@ -584,7 +594,7 @@ dsm_input(int fd, uint16_t *values, uint16_t *num_values, bool *dsm_11_bit, uint
 }
 
 bool
-dsm_parse(uint64_t now, uint8_t *frame, unsigned len, uint16_t *values,
+dsm_parse(const uint64_t now, const uint8_t *frame, const unsigned len, uint16_t *values,
 	  uint16_t *num_values, bool *dsm_11_bit, unsigned *frame_drops, uint16_t max_channels)
 {
 
@@ -672,8 +682,6 @@ dsm_parse(uint64_t now, uint8_t *frame, unsigned len, uint16_t *values,
 #endif
 			decode_ret = false;
 		}
-
-
 	}
 
 	if (frame_drops) {
@@ -682,11 +690,12 @@ dsm_parse(uint64_t now, uint8_t *frame, unsigned len, uint16_t *values,
 
 	if (decode_ret) {
 		*num_values = dsm_chan_count;
+
 		memcpy(&values[0], &dsm_chan_buf[0], dsm_chan_count * sizeof(dsm_chan_buf[0]));
 #ifdef DSM_DEBUG
 
 		for (unsigned i = 0; i < dsm_chan_count; i++) {
-			printf("dsm_decode: %u: %u\n", i, values[0]);
+			printf("dsm_decode: %u: %u\n", i, values[i]);
 		}
 
 #endif

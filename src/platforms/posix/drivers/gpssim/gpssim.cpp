@@ -52,9 +52,9 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <px4_config.h>
+#include <px4_tasks.h>
 #include <drivers/drv_hrt.h>
 #include <drivers/device/device.h>
-#include <systemlib/systemlib.h>
 #include <drivers/drv_gps.h>
 #include <uORB/uORB.h>
 #include <uORB/topics/vehicle_gps_position.h>
@@ -133,7 +133,7 @@ private:
 	/**
 	 * Worker task: main GPS thread that configures the GPS and parses incoming data, always running
 	 */
-	void				task_main(void);
+	void				task_main();
 
 	/**
 	 * Set the baudrate of the UART to the GPS
@@ -187,7 +187,7 @@ GPSSIM::GPSSIM(const char *uart_path, bool fake_gps, bool enable_sat_info) :
 
 	/* create satellite info data object if requested */
 	if (enable_sat_info) {
-		_Sat_Info = new(GPS_Sat_Info);
+		_Sat_Info = new (GPS_Sat_Info);
 		_p_report_sat_info = &_Sat_Info->_data;
 		memset(_p_report_sat_info, 0, sizeof(*_p_report_sat_info));
 	}
@@ -195,6 +195,8 @@ GPSSIM::GPSSIM(const char *uart_path, bool fake_gps, bool enable_sat_info) :
 
 GPSSIM::~GPSSIM()
 {
+	delete _Sat_Info;
+
 	/* tell the task we want it to go away */
 	_task_should_exit = true;
 
@@ -373,7 +375,6 @@ GPSSIM::task_main()
 
 	/* tell the dtor that we are exiting */
 	_task = -1;
-	return;
 }
 
 

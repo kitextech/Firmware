@@ -86,7 +86,7 @@ void LogWriterFile::start_log(const char *filename)
 	_fd = ::open(filename, O_CREAT | O_WRONLY, PX4_O_MODE_666);
 
 	if (_fd < 0) {
-		PX4_ERR("Can't open log file %s", filename);
+		PX4_ERR("Can't open log file %s, errno: %d", filename, errno);
 		_should_run = false;
 		return;
 
@@ -119,7 +119,7 @@ int LogWriterFile::thread_start()
 	param.sched_priority = SCHED_PRIORITY_DEFAULT - 40;
 	(void)pthread_attr_setschedparam(&thr_attr, &param);
 
-	pthread_attr_setstacksize(&thr_attr, PX4_STACK_ADJUSTED(1024));
+	pthread_attr_setstacksize(&thr_attr, PX4_STACK_ADJUSTED(1050));
 
 	int ret = pthread_create(&_thread, &thr_attr, &LogWriterFile::run_helper, this);
 	pthread_attr_destroy(&thr_attr);
@@ -136,7 +136,7 @@ void LogWriterFile::thread_stop()
 	notify();
 
 	// wait for thread to complete
-	int ret = pthread_join(_thread, NULL);
+	int ret = pthread_join(_thread, nullptr);
 
 	if (ret) {
 		PX4_WARN("join failed: %d", ret);

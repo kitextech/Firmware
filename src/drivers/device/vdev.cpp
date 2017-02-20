@@ -139,7 +139,7 @@ VDev::register_driver(const char *name, void *data)
 	PX4_DEBUG("VDev::register_driver %s", name);
 	int ret = -ENOSPC;
 
-	if (name == NULL || data == NULL) {
+	if (name == nullptr || data == nullptr) {
 		return -EINVAL;
 	}
 
@@ -156,7 +156,7 @@ VDev::register_driver(const char *name, void *data)
 	}
 
 	for (int i = 0; i < PX4_MAX_DEV; ++i) {
-		if (devmap[i] == NULL) {
+		if (devmap[i] == nullptr) {
 			devmap[i] = new px4_dev_t(name, (void *)data);
 			PX4_DEBUG("Registered DEV %s", name);
 			ret = PX4_OK;
@@ -179,7 +179,7 @@ VDev::unregister_driver(const char *name)
 	PX4_DEBUG("VDev::unregister_driver %s", name);
 	int ret = -EINVAL;
 
-	if (name == NULL) {
+	if (name == nullptr) {
 		return -EINVAL;
 	}
 
@@ -188,7 +188,7 @@ VDev::unregister_driver(const char *name)
 	for (int i = 0; i < PX4_MAX_DEV; ++i) {
 		if (devmap[i] && (strcmp(name, devmap[i]->name) == 0)) {
 			delete devmap[i];
-			devmap[i] = NULL;
+			devmap[i] = nullptr;
 			PX4_DEBUG("Unregistered DEV %s", name);
 			ret = PX4_OK;
 			break;
@@ -213,7 +213,7 @@ VDev::unregister_class_devname(const char *class_devname, unsigned class_instanc
 		if (devmap[i] && strcmp(devmap[i]->name, name) == 0) {
 			delete devmap[i];
 			PX4_DEBUG("Unregistered class DEV %s", name);
-			devmap[i] = NULL;
+			devmap[i] = nullptr;
 			pthread_mutex_unlock(&devmutex);
 			return PX4_OK;
 		}
@@ -435,10 +435,11 @@ VDev::poll_notify(pollevent_t events)
 	/* lock against poll() as well as other wakeups */
 	lock();
 
-	for (unsigned i = 0; i < _max_pollwaiters; i++)
+	for (unsigned i = 0; i < _max_pollwaiters; i++) {
 		if (nullptr != _pollset[i]) {
 			poll_notify_one(_pollset[i], events);
 		}
+	}
 
 	unlock();
 }
@@ -550,7 +551,7 @@ VDev *VDev::getDev(const char *path)
 
 	pthread_mutex_unlock(&devmutex);
 
-	return NULL;
+	return nullptr;
 }
 
 void VDev::showDevices()
@@ -621,22 +622,24 @@ void VDev::showFiles()
 
 const char *VDev::topicList(unsigned int *next)
 {
-	for (; *next < PX4_MAX_DEV; (*next)++)
+	for (; *next < PX4_MAX_DEV; (*next)++) {
 		if (devmap[*next] && strncmp(devmap[(*next)]->name, "/obj/", 5) == 0) {
 			return devmap[(*next)++]->name;
 		}
+	}
 
-	return NULL;
+	return nullptr;
 }
 
 const char *VDev::devList(unsigned int *next)
 {
-	for (; *next < PX4_MAX_DEV; (*next)++)
+	for (; *next < PX4_MAX_DEV; (*next)++) {
 		if (devmap[*next] && strncmp(devmap[(*next)]->name, "/dev/", 5) == 0) {
 			return devmap[(*next)++]->name;
 		}
+	}
 
-	return NULL;
+	return nullptr;
 }
 
 } // namespace device

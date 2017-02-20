@@ -93,10 +93,11 @@ static int board_button_irq(int irq, FAR void *context)
 
 			led_on(BOARD_LED_BLUE);
 
-			stm32_pwr_enablebkp();
 			up_mdelay(200);
+			stm32_pwr_enablebkp(true);
 			/* XXX wow, this is evil - write a magic number into backup register zero */
 			*(uint32_t *)0x40002850 = 0xdeaddead;
+			stm32_pwr_enablebkp(false);
 			up_mdelay(50);
 			up_systemreset();
 
@@ -155,7 +156,7 @@ bool board_pwr_button_down(void)
  *
  ****************************************************************************/
 
-void board_pwr(bool on_not_off)
+__EXPORT bool px4_board_pwr(bool on_not_off)
 {
 	if (on_not_off) {
 		stm32_configgpio(POWER_ON_GPIO);
@@ -164,4 +165,6 @@ void board_pwr(bool on_not_off)
 
 		stm32_configgpio(POWER_OFF_GPIO);
 	}
+
+	return true;
 }

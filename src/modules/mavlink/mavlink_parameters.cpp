@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2015 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2015-2017 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -51,6 +51,9 @@
 
 MavlinkParametersManager::MavlinkParametersManager(Mavlink *mavlink) : MavlinkStream(mavlink),
 	_send_all_index(-1),
+	_uavcan_open_request_list(nullptr),
+	_uavcan_waiting_for_request_response(false),
+	_uavcan_queued_request_items(0),
 	_rc_param_map_pub(nullptr),
 	_rc_param_map(),
 	_uavcan_parameter_request_pub(nullptr),
@@ -258,12 +261,9 @@ MavlinkParametersManager::handle_message(const mavlink_message_t *msg)
 				strncpy(req.param_id, req_read.param_id, MAVLINK_MSG_PARAM_VALUE_FIELD_PARAM_ID_LEN + 1);
 				req.param_id[MAVLINK_MSG_PARAM_VALUE_FIELD_PARAM_ID_LEN] = '\0';
 
-				if (_uavcan_parameter_request_pub == nullptr) {
-					_uavcan_parameter_request_pub = orb_advertise(ORB_ID(uavcan_parameter_request), &req);
-
-				} else {
-					orb_publish(ORB_ID(uavcan_parameter_request), _uavcan_parameter_request_pub, &req);
-				}
+				// Enque the request and forward the first to the uavcan node
+				enque_uavcan_request(&req);
+				request_next_uavcan_parameter();
 			}
 
 			break;
@@ -333,9 +333,23 @@ MavlinkParametersManager::send(const hrt_abstime t)
 		struct uavcan_parameter_value_s value;
 		orb_copy(ORB_ID(uavcan_parameter_value), _uavcan_parameter_value_sub, &value);
 
+		// Check if we received a matching parameter, drop it from the list and request the next
+		if (value.param_index == _uavcan_open_request_list->req.param_index
+		    && value.node_id == _uavcan_open_request_list->req.node_id) {
+			dequeue_uavcan_request();
+			request_next_uavcan_parameter();
+		}
+
 		mavlink_param_value_t msg;
 		msg.param_count = value.param_count;
 		msg.param_index = value.param_index;
+		/*
+		 * coverity[buffer_size_warning : FALSE]
+		 *
+		 * The MAVLink spec does not require the string to be NUL-terminated if it
+		 * has length 16. In this case the receiving end needs to terminate it
+		 * when copying it.
+		 */
 		strncpy(msg.param_id, value.param_id, MAVLINK_MSG_PARAM_VALUE_FIELD_PARAM_ID_LEN);
 
 		if (value.param_type == MAV_PARAM_TYPE_REAL32) {
@@ -351,7 +365,8 @@ MavlinkParametersManager::send(const hrt_abstime t)
 
 		// Re-pack the message with the UAVCAN node ID
 		mavlink_message_t mavlink_packet;
-		mavlink_msg_param_value_encode_chan(mavlink_system.sysid, value.node_id, _mavlink->get_channel(), &mavlink_packet, &msg);
+		mavlink_msg_param_value_encode_chan(mavlink_system.sysid, value.node_id, _mavlink->get_channel(), &mavlink_packet,
+						    &msg);
 		_mavlink_resend_uart(_mavlink->get_channel(), &mavlink_packet);
 
 	} else if (_send_all_index >= 0 && _mavlink->boot_complete()) {
@@ -429,7 +444,13 @@ MavlinkParametersManager::send_param(param_t param, int component_id)
 	msg.param_count = param_count_used();
 	msg.param_index = param_get_used_index(param);
 
-	/* copy parameter name */
+	/*
+	 * coverity[buffer_size_warning : FALSE]
+	 *
+	 * The MAVLink spec does not require the string to be NUL-terminated if it
+	 * has length 16. In this case the receiving end needs to terminate it
+	 * when copying it.
+	 */
 	strncpy(msg.param_id, param_name(param), MAVLINK_MSG_PARAM_VALUE_FIELD_PARAM_ID_LEN);
 
 	/* query parameter type */
@@ -462,4 +483,62 @@ MavlinkParametersManager::send_param(param_t param, int component_id)
 	}
 
 	return 0;
+}
+
+void MavlinkParametersManager::request_next_uavcan_parameter()
+{
+	// Request a parameter if we are not already waiting on a response and if the list is not empty
+	if (!_uavcan_waiting_for_request_response && _uavcan_open_request_list != nullptr) {
+		uavcan_parameter_request_s req = _uavcan_open_request_list->req;
+
+		if (_uavcan_parameter_request_pub == nullptr) {
+			_uavcan_parameter_request_pub = orb_advertise_queue(ORB_ID(uavcan_parameter_request), &req, 5);
+
+		} else {
+			orb_publish(ORB_ID(uavcan_parameter_request), _uavcan_parameter_request_pub, &req);
+		}
+
+		_uavcan_waiting_for_request_response = true;
+	}
+}
+
+void MavlinkParametersManager::enque_uavcan_request(uavcan_parameter_request_s *req)
+{
+	// We store at max 10 requests to keep memory consumption low.
+	// Dropped requests will be repeated by the ground station
+	if (_uavcan_queued_request_items >= 10) {
+		return;
+	}
+
+	_uavcan_open_request_list_item *new_reqest = new _uavcan_open_request_list_item;
+	new_reqest->req = *req;
+	new_reqest->next = nullptr;
+
+	_uavcan_open_request_list_item *item = _uavcan_open_request_list;
+	++_uavcan_queued_request_items;
+
+	if (item == nullptr) {
+		// Add the first item to the list
+		_uavcan_open_request_list = new_reqest;
+
+	} else {
+		// Find the last item and add the new request at the end
+		while (item->next != nullptr) {
+			item = item->next;
+		}
+
+		item->next = new_reqest;
+	}
+}
+
+void MavlinkParametersManager::dequeue_uavcan_request()
+{
+	if (_uavcan_open_request_list != nullptr) {
+		// Drop the first item in the list and free the used memory
+		_uavcan_open_request_list_item *first = _uavcan_open_request_list;
+		_uavcan_open_request_list = first->next;
+		--_uavcan_queued_request_items;
+		delete first;
+		_uavcan_waiting_for_request_response = false;
+	}
 }

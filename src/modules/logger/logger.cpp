@@ -31,6 +31,7 @@
  *
  ****************************************************************************/
 
+#include <px4_config.h>
 #include "logger.h"
 #include "messages.h"
 
@@ -55,8 +56,10 @@
 #include <px4_getopt.h>
 #include <px4_log.h>
 #include <px4_sem.h>
+#include <px4_tasks.h>
 #include <systemlib/mavlink_log.h>
 #include <replay/definitions.hpp>
+#include <version/version.h>
 
 #ifdef __PX4_DARWIN
 #include <sys/param.h>
@@ -265,12 +268,12 @@ void Logger::run_trampoline(int argc, char *argv[])
 
 	int myoptind = 1;
 	int ch;
-	const char *myoptarg = NULL;
+	const char *myoptarg = nullptr;
 
 	while ((ch = px4_getopt(argc, argv, "r:b:etfm:q:", &myoptind, &myoptarg)) != EOF) {
 		switch (ch) {
 		case 'r': {
-				unsigned long r = strtoul(myoptarg, NULL, 10);
+				unsigned long r = strtoul(myoptarg, nullptr, 10);
 
 				if (r <= 0) {
 					r = 1e6;
@@ -285,7 +288,7 @@ void Logger::run_trampoline(int argc, char *argv[])
 			break;
 
 		case 'b': {
-				unsigned long s = strtoul(myoptarg, NULL, 10);
+				unsigned long s = strtoul(myoptarg, nullptr, 10);
 
 				if (s < 1) {
 					s = 1;
@@ -322,7 +325,7 @@ void Logger::run_trampoline(int argc, char *argv[])
 			break;
 
 		case 'q':
-			queue_size = strtoul(myoptarg, NULL, 10);
+			queue_size = strtoul(myoptarg, nullptr, 10);
 
 			if (queue_size == 0) {
 				queue_size = 1;
@@ -380,9 +383,11 @@ Logger::Logger(LogWriter::Backend backend, size_t buffer_size, uint32_t log_inte
 	_log_until_shutdown(log_until_shutdown),
 	_log_name_timestamp(log_name_timestamp),
 	_writer(backend, buffer_size, queue_size),
-	_log_interval(log_interval)
+	_log_interval(log_interval),
+	_sdlog_mode(0)
 {
 	_log_utc_offset = param_find("SDLOG_UTC_OFFSET");
+	_sdlog_mode_handle = param_find("SDLOG_MODE");
 }
 
 Logger::~Logger()
@@ -526,18 +531,18 @@ void Logger::add_default_topics()
 	add_topic("satellite_info");
 	add_topic("vehicle_attitude_setpoint", 20);
 	add_topic("vehicle_rates_setpoint", 10);
-	add_topic("actuator_controls", 20);
 	add_topic("actuator_controls_0", 20);
 	add_topic("actuator_controls_1", 20);
 	add_topic("vehicle_local_position", 100);
 	add_topic("vehicle_local_position_setpoint", 50);
 	add_topic("vehicle_global_position", 100);
 	add_topic("vehicle_global_velocity_setpoint", 100);
+	add_topic("vehicle_vision_position");
+	add_topic("vehicle_vision_attitude");
 	add_topic("battery_status", 300);
 	add_topic("system_power", 300);
 	add_topic("position_setpoint_triplet", 10);
 	add_topic("att_pos_mocap", 50);
-	add_topic("vision_position_estimate", 50);
 	add_topic("optical_flow", 50);
 	add_topic("rc_channels");
 	add_topic("input_rc");
@@ -554,11 +559,21 @@ void Logger::add_default_topics()
 	add_topic("cpuload");
 	add_topic("gps_dump"); //this will only be published if GPS_DUMP_COMM is set
 	add_topic("sensor_preflight");
+	add_topic("task_stack_info");
 
 	/* for estimator replay (need to be at full rate) */
 	add_topic("sensor_combined");
 	add_topic("vehicle_gps_position");
 	add_topic("vehicle_land_detected");
+}
+
+void Logger::add_calibration_topics()
+{
+	// Note: try to avoid setting the interval where possible, as it increases RAM usage
+
+	add_topic("sensor_gyro", 100);
+	add_topic("sensor_accel", 100);
+	add_topic("sensor_baro", 100);
 }
 
 int Logger::add_topics_from_file(const char *fname)
@@ -572,18 +587,17 @@ int Logger::add_topics_from_file(const char *fname)
 	/* open the topic list file */
 	fp = fopen(fname, "r");
 
-	if (fp == NULL) {
+	if (fp == nullptr) {
 		return -1;
 	}
 
 	/* call add_topic for each topic line in the file */
-	// format is TOPIC_NAME, [interval]
 	for (;;) {
 
 		/* get a line, bail on error/EOF */
 		line[0] = '\0';
 
-		if (fgets(line, sizeof(line), fp) == NULL) {
+		if (fgets(line, sizeof(line), fp) == nullptr) {
 			break;
 		}
 
@@ -592,14 +606,24 @@ int Logger::add_topics_from_file(const char *fname)
 			continue;
 		}
 
-		// default interval to zero
+		// read line with format: <topic_name>[, <interval>]
 		interval = 0;
-		int nfields = sscanf(line, "%s, %u", topic_name, &interval);
+		int nfields = sscanf(line, "%s %u", topic_name, &interval);
 
 		if (nfields > 0) {
+			int name_len = strlen(topic_name);
+
+			if (name_len > 0 && topic_name[name_len - 1] == ',') {
+				topic_name[name_len - 1] = '\0';
+			}
+
 			/* add topic with specified interval */
-			add_topic(topic_name, interval);
-			ntopics++;
+			if (add_topic(topic_name, interval) >= 0) {
+				ntopics++;
+
+			} else {
+				PX4_ERR("Failed to add topic %s", topic_name);
+			}
 		}
 	}
 
@@ -658,7 +682,18 @@ void Logger::run()
 		PX4_INFO("logging %d topics from logger_topics.txt", ntopics);
 
 	} else {
-		add_default_topics();
+
+		/* get the logging mode */
+		if (_sdlog_mode_handle != PARAM_INVALID) {
+			param_get(_sdlog_mode_handle, &_sdlog_mode);
+		}
+
+		if (_sdlog_mode == 3) {
+			add_calibration_topics();
+
+		} else {
+			add_default_topics();
+		}
 	}
 
 	int vehicle_command_sub = -1;
@@ -722,6 +757,12 @@ void Logger::run()
 	memset(&timer_call, 0, sizeof(hrt_call));
 	px4_sem_t timer_semaphore;
 	px4_sem_init(&timer_semaphore, 0, 0);
+
+	/* timer_semaphore use case is a signal */
+
+	px4_sem_setprotocol(&timer_semaphore, SEM_PRIO_NONE);
+
+
 	hrt_call_every(&timer_call, _log_interval, _log_interval, timer_callback, &timer_semaphore);
 
 	// check for new subscription data
@@ -1311,7 +1352,20 @@ void Logger::write_info(const char *name, const char *value)
 
 	_writer.unlock();
 }
+
 void Logger::write_info(const char *name, int32_t value)
+{
+	write_info_template<int32_t>(name, value, "int32_t");
+}
+
+void Logger::write_info(const char *name, uint32_t value)
+{
+	write_info_template<uint32_t>(name, value, "uint32_t");
+}
+
+
+template<typename T>
+void Logger::write_info_template(const char *name, T value, const char *type_str)
 {
 	_writer.lock();
 	ulog_message_info_header_s msg;
@@ -1319,12 +1373,12 @@ void Logger::write_info(const char *name, int32_t value)
 	msg.msg_type = static_cast<uint8_t>(ULogMessageType::INFO);
 
 	/* construct format key (type and name) */
-	msg.key_len = snprintf(msg.key, sizeof(msg.key), "int32_t %s", name);
+	msg.key_len = snprintf(msg.key, sizeof(msg.key), "%s %s", type_str, name);
 	size_t msg_size = sizeof(msg) - sizeof(msg.key) + msg.key_len;
 
 	/* copy string value directly to buffer */
-	memcpy(&buffer[msg_size], &value, sizeof(int32_t));
-	msg_size += sizeof(int32_t);
+	memcpy(&buffer[msg_size], &value, sizeof(T));
+	msg_size += sizeof(T);
 
 	msg.msg_size = msg_size - ULOG_MSG_HEADER_LEN;
 
@@ -1353,9 +1407,44 @@ void Logger::write_header()
 /* write version info messages */
 void Logger::write_version()
 {
-	write_info("ver_sw", PX4_GIT_VERSION_STR);
-	write_info("ver_hw", HW_ARCH);
+	write_info("ver_sw", px4_firmware_version_string());
+	write_info("ver_sw_release", px4_firmware_version());
+	write_info("ver_hw", px4_board_name());
 	write_info("sys_name", "PX4");
+	write_info("sys_os_name", px4_os_name());
+	const char *os_version = px4_os_version_string();
+
+	if (os_version) {
+		write_info("sys_os_ver", os_version);
+	}
+
+	write_info("sys_os_ver_release", px4_os_version());
+	write_info("sys_toolchain", px4_toolchain_name());
+	write_info("sys_toolchain_ver", px4_toolchain_version());
+
+	char revision = 'U';
+	const char *chip_name = nullptr;
+
+	if (board_mcu_version(&revision, &chip_name, nullptr) >= 0) {
+		char mcu_ver[64];
+		snprintf(mcu_ver, sizeof(mcu_ver), "%s, rev. %c", chip_name, revision);
+		write_info("sys_mcu", mcu_ver);
+	}
+
+	/* write the UUID if enabled */
+	param_t write_uuid_param = param_find("SDLOG_UUID");
+
+	if (write_uuid_param != PARAM_INVALID) {
+		uint32_t write_uuid;
+		param_get(write_uuid_param, &write_uuid);
+
+		if (write_uuid == 1) {
+			char uuid_string[PX4_CPU_UUID_WORD32_FORMAT_SIZE];
+			board_get_uuid32_formated(uuid_string, sizeof(uuid_string), "%08X", NULL);
+			write_info("sys_uuid", uuid_string);
+		}
+	}
+
 	int32_t utc_offset = 0;
 
 	if (_log_utc_offset != PARAM_INVALID) {

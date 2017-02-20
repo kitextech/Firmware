@@ -52,6 +52,10 @@ import os
 import argparse
 from px4params import srcscanner, srcparser, xmlout, dokuwikiout, dokuwikirpc
 
+import re
+import json
+import codecs
+
 def main():
     # Parse command line arguments
     parser = argparse.ArgumentParser(description="Process parameter documentation.")
@@ -108,6 +112,13 @@ def main():
                         default="Automagically updated parameter documentation from code.",
                         help="DokuWiki page edit summary")
     parser.add_argument('-v', '--verbose', action='store_true', help="verbose output")
+    parser.add_argument("-o", "--overrides",
+                        default="{}",
+                        metavar="OVERRIDES",
+                        help="a dict of overrides in the form of a json string")
+    parser.add_argument('--modules', default=None, action='store', help="list of compiled modules")
+
+
     args = parser.parse_args()
 
     # Check for valid command
@@ -122,11 +133,29 @@ def main():
 
     # Scan directories, and parse the files
     if (args.verbose): print("Scanning source path " + args.src_path)
-    if not scanner.ScanDir(args.src_path, parser):
-        sys.exit(1)
+    
+    if args.modules is not None:
+        if not scanner.ScanDir([os.path.join(args.src_path, p) for p in args.modules.split(',')], parser):
+            sys.exit(1)
+    else:
+        if not scanner.ScanDir([args.src_path], parser):
+            sys.exit(1)
     if not parser.Validate():
         sys.exit(1)
     param_groups = parser.GetParamGroups()
+
+    if len(param_groups) == 0:
+        print("Warning: no parameters found")
+
+    override_dict = json.loads(args.overrides)
+    if len(override_dict.keys()) > 0:
+        for group in param_groups:
+            for param in group.GetParams():
+                name = param.GetName()
+                if name in override_dict.keys():
+                    val = str(override_dict[param.GetName()])
+                    param.default = val
+                    print("OVERRIDING {:s} to {:s}!!!!!".format(name, val))
 
     # Output to XML file
     if args.xml:

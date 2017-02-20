@@ -1,5 +1,7 @@
 include(nuttx/px4_impl_nuttx)
 
+px4_nuttx_configure(HWCLASS m4 CONFIG nsh ROMFS y ROMFSROOT px4fmu_common)
+
 set(CMAKE_TOOLCHAIN_FILE ${PX4_SOURCE_DIR}/cmake/toolchains/Toolchain-arm-none-eabi.cmake)
 
 set(config_module_list
@@ -62,6 +64,7 @@ set(config_module_list
 	# General system control
 	#
 	modules/commander
+	modules/events
 	modules/load_mon
 	modules/navigator
 	modules/mavlink
@@ -116,6 +119,7 @@ set(config_module_list
 	lib/terrain_estimation
 	lib/runway_takeoff
 	lib/tailsitter_recovery
+	lib/version
 	lib/DriverFramework/framework
 	platforms/nuttx
 

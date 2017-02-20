@@ -48,8 +48,8 @@ __BEGIN_DECLS
 #define MAX_IO_TIMERS			4
 #define MAX_TIMER_IO_CHANNELS	8
 
-#define MAX_LED_TIMERS			1
-#define MAX_TIMER_LED_CHANNELS	3
+#define MAX_LED_TIMERS			2
+#define MAX_TIMER_LED_CHANNELS	6
 
 #define IO_TIMER_ALL_MODES_CHANNELS 0
 
@@ -88,7 +88,7 @@ typedef struct timer_io_channels_t {
 
 typedef void (*channel_handler_t)(void *context, const io_timers_t *timer, uint32_t chan_index,
 				  const timer_io_channels_t *chan,
-				  hrt_abstime isrs_time , uint16_t isrs_rcnt);
+				  hrt_abstime isrs_time, uint16_t isrs_rcnt);
 
 
 /* supplied by board-specific code */

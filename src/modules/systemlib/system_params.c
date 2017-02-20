@@ -93,7 +93,7 @@ PARAM_DEFINE_INT32(SYS_RESTART_TYPE, 2);
 /**
  * Set multicopter estimator group
  *
- * Set the group of estimators used for multicopters and vtols
+ * Set the group of estimators used for multicopters and VTOLs
  *
  * @value 1 local_position_estimator, attitude_estimator_q
  * @value 2 ekf2
@@ -103,7 +103,7 @@ PARAM_DEFINE_INT32(SYS_RESTART_TYPE, 2);
  * @reboot_required true
  * @group System
  */
-PARAM_DEFINE_INT32(SYS_MC_EST_GROUP, 1);
+PARAM_DEFINE_INT32(SYS_MC_EST_GROUP, 2);
 
 /**
  * TELEM2 as companion computer link
@@ -121,6 +121,8 @@ PARAM_DEFINE_INT32(SYS_MC_EST_GROUP, 1);
  * @value 319200 Normal Telemetry (19200 baud, 8N1)
  * @value 338400 Normal Telemetry (38400 baud, 8N1)
  * @value 357600 Normal Telemetry (57600 baud, 8N1)
+ * @value 3115200 Normal Telemetry (115200 baud, 8N1)
+ * @value 419200 Iridium Telemetry (19200 baud, 8N1)
  * @value 1921600 ESP8266 (921600 baud, 8N1)
  *
  * @min 0
@@ -153,3 +155,89 @@ PARAM_DEFINE_INT32(SYS_PARAM_VER, 1);
  * @group System
  */
 PARAM_DEFINE_INT32(SYS_LOGGER, 0);
+
+/**
+ * Enable stack checking
+ *
+ * @boolean
+ * @group System
+ */
+PARAM_DEFINE_INT32(SYS_STCK_EN, 1);
+
+/**
+ * Enable auto start of rate gyro thermal calibration at the next power up.
+ *
+ * 0 : Set to 0 to do nothing
+ * 1 : Set to 1 to start a calibration at next boot
+ * This parameter is reset to zero when the the temperature calibration starts.
+ *
+ * default (0, no calibration)
+ *
+ * @group System
+ * @min 0
+ * @max 1
+ */
+PARAM_DEFINE_INT32(SYS_CAL_GYRO, 0);
+
+/**
+ * Enable auto start of accelerometer thermal calibration at the next power up.
+ *
+ * 0 : Set to 0 to do nothing
+ * 1 : Set to 1 to start a calibration at next boot
+ * This parameter is reset to zero when the the temperature calibration starts.
+ *
+ * default (0, no calibration)
+ *
+ * @group System
+ * @min 0
+ * @max 1
+ */
+PARAM_DEFINE_INT32(SYS_CAL_ACCEL, 0);
+
+/**
+ * Enable auto start of barometer thermal calibration at the next power up.
+ *
+ * 0 : Set to 0 to do nothing
+ * 1 : Set to 1 to start a calibration at next boot
+ * This parameter is reset to zero when the the temperature calibration starts.
+ *
+ * default (0, no calibration)
+ *
+ * @group System
+ * @min 0
+ * @max 1
+ */
+PARAM_DEFINE_INT32(SYS_CAL_BARO, 0);
+
+/**
+ * Required temperature rise during thermal calibration
+ *
+ * A temperature increase greater than this value is required during calibration.
+ * Calibration will complete for each sensor when the temperature increase above the starting temeprature exceeds the value set by SYS_CAL_TDEL.
+ * If the temperature rise is insufficient, the calibration will continue indefinitely and the board will need to be repowered to exit.
+ *
+ * @unit deg C
+ * @min 10
+ * @group System
+ */
+PARAM_DEFINE_INT32(SYS_CAL_TDEL, 24);
+
+/**
+ * Minimum starting temperature for thermal calibration
+ *
+ * Temperature calibration for each sensor will ignore data if the temperature is lower than the value set by SYS_CAL_TMIN.
+ *
+ * @unit deg C
+ * @group System
+ */
+PARAM_DEFINE_INT32(SYS_CAL_TMIN, 5);
+
+/**
+ * Maximum starting temperature for thermal calibration
+ *
+ * Temperature calibration will not start if the temperature of any sensor is higher than the value set by SYS_CAL_TMAX.
+ *
+ * @unit deg C
+ * @group System
+ */
+PARAM_DEFINE_INT32(SYS_CAL_TMAX, 10);

@@ -40,6 +40,7 @@
 #pragma once
 
 #include <px4_defines.h>
+#include <px4_tasks.h>
 #include <stdint.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -115,6 +116,7 @@ __EXPORT void		px4_enable_sim_lockstep(void);
 __EXPORT void		px4_sim_start_delay(void);
 __EXPORT void		px4_sim_stop_delay(void);
 __EXPORT bool		px4_sim_delay_enabled(void);
+__EXPORT bool		px4_board_pwr(bool on);
 
 __END_DECLS
 #else
@@ -145,6 +147,8 @@ __EXPORT const char 	*px4_get_topic_names(unsigned int *handle);
 __EXPORT uint64_t	hrt_system_time(void);
 
 __EXPORT bool		px4_exit_requested(void);
+
+
 #endif
 
 __END_DECLS

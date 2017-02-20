@@ -88,6 +88,11 @@ typedef uintptr_t	param_t;
 #define PARAM_HASH      ((uintptr_t)INT32_MAX)
 
 /**
+ * Initialize the param backend. Call this on startup before calling any other methods.
+ */
+__EXPORT void		param_init(void);
+
+/**
  * Look up a parameter by name.
  *
  * @param name		The canonical name of the parameter being looked up.
@@ -235,6 +240,12 @@ __EXPORT int		param_set_no_autosave(param_t param, const void *val);
  * @return		Zero if the parameter's value could be set from a scalar, nonzero otherwise.
  */
 __EXPORT int		param_set_no_notification(param_t param, const void *val);
+
+/**
+ * Notify the system about parameter changes. Can be used for example after several calls to
+ * param_set_no_notification() to avoid unnecessary system notifications.
+ */
+__EXPORT void param_notify_changes(void);
 
 /**
  * Reset a parameter to its default value.

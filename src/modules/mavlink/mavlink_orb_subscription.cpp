@@ -39,13 +39,15 @@
  * @author Lorenz Meier <lorenz@px4.io>
  */
 
+#include "mavlink_orb_subscription.h"
+
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
-#include <uORB/uORB.h>
 #include <stdio.h>
 
-#include "mavlink_orb_subscription.h"
+#include <px4_defines.h>
+#include <uORB/uORB.h>
 
 MavlinkOrbSubscription::MavlinkOrbSubscription(const orb_id_t topic, int instance) :
 	next(nullptr),
@@ -168,13 +170,6 @@ MavlinkOrbSubscription::is_published()
 	// We are checking now
 	_last_pub_check = now;
 
-#if defined(__PX4_QURT) || defined(__PX4_POSIX_EAGLE)
-	// Snapdragon has currently no support for orb_exists, therefore
-	// we're not using it.
-	if (_fd < 0) {
-		_fd = orb_subscribe_multi(_topic, _instance);
-	}
-#else
 	// We don't want to subscribe to anything that does not exist
 	// in order to save memory and file descriptors.
 	// However, for some topics like vehicle_command_ack, we want to subscribe
@@ -186,13 +181,21 @@ MavlinkOrbSubscription::is_published()
 	if (_fd < 0) {
 		_fd = orb_subscribe_multi(_topic, _instance);
 	}
-#endif
 
 	bool updated;
 	orb_check(_fd, &updated);
 
 	if (updated) {
 		_published = true;
+	}
+
+	// topic may have been last published before we subscribed
+	uint64_t time_topic = 0;
+
+	if (!_published && orb_stat(_fd, &time_topic) == PX4_OK) {
+		if (time_topic != 0) {
+			_published = true;
+		}
 	}
 
 	return _published;

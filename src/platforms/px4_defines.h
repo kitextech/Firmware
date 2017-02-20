@@ -63,7 +63,10 @@
 
 /* Define a usable PX4_ISFINITE. Note that PX4_ISFINITE is ONLY used in C++ files,
  * therefore, by default, we want to use std::isfinite. */
-#  define PX4_ISFINITE(x) std::isfinite(x)
+#ifdef __cplusplus
+#include <cmath>
+#define PX4_ISFINITE(x) std::isfinite(x)
+#endif
 
 #if defined(__PX4_ROS)
 /****************************************************************************
@@ -160,11 +163,6 @@ using ::isfinite;
 #define _PX4_IOC(x,y) _IO(x,y)
 
 /* FIXME - Used to satisfy build */
-//STM DocID018909 Rev 8 Sect 39.1 (Unique device ID Register)
-#define UNIQUE_ID       0x1FFF7A10
-#define STM32_SYSMEM_UID "SIMULATIONID"
-
-/* FIXME - Used to satisfy build */
 #define getreg32(a)    (*(volatile uint32_t *)(a))
 
 #define USEC_PER_TICK (1000000UL/PX4_TICKS_PER_SEC)
@@ -194,10 +192,10 @@ __BEGIN_DECLS
 extern long PX4_TICKS_PER_SEC;
 __END_DECLS
 
-#  if defined(__PX4_POSIX_EAGLE)
+#  if defined(__PX4_POSIX_EAGLE) || defined(__PX4_POSIX_EXCELSIOR)
 #    define PX4_ROOTFSDIR "/home/linaro"
 #  elif defined(__PX4_POSIX_BEBOP)
-#    define PX4_ROOTFSDIR "/home/root"
+#    define PX4_ROOTFSDIR "/data/ftp/internal_000"
 #  else
 #    define PX4_ROOTFSDIR "rootfs"
 #  endif

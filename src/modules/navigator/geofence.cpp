@@ -168,7 +168,9 @@ bool Geofence::inside(double lat, double lon, float altitude)
 		}
 	}
 
-	inside_fence |= inside_polygon(lat, lon, altitude);
+	// to be inside the geofence both fences have to report being inside
+	// as they both report being inside when not enabled
+	inside_fence = inside_fence && inside_polygon(lat, lon, altitude);
 
 	if (inside_fence) {
 		_outside_counter = 0;
@@ -330,14 +332,14 @@ Geofence::loadFromFile(const char *filename)
 	/* open the mixer definition file */
 	fp = fopen(GEOFENCE_FILENAME, "r");
 
-	if (fp == NULL) {
+	if (fp == nullptr) {
 		return PX4_ERROR;
 	}
 
 	/* create geofence points from valid lines and store in DM */
 	for (;;) {
 		/* get a line, bail on error/EOF */
-		if (fgets(line, sizeof(line), fp) == NULL) {
+		if (fgets(line, sizeof(line), fp) == nullptr) {
 			break;
 		}
 

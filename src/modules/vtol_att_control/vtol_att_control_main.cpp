@@ -132,6 +132,8 @@ VtolAttitudeControl::VtolAttitudeControl() :
 	_params_handles.vtol_type = param_find("VT_TYPE");
 	_params_handles.elevons_mc_lock = param_find("VT_ELEV_MC_LOCK");
 	_params_handles.fw_min_alt = param_find("VT_FW_MIN_ALT");
+	_params_handles.front_trans_time_openloop = param_find("VT_F_TR_OL_TM");
+	_params_handles.front_trans_time_min = param_find("VT_TRANS_MIN_TM");
 
 	/* fetch initial parameter values */
 	parameters_update();
@@ -234,7 +236,7 @@ void VtolAttitudeControl::actuator_controls_mc_poll()
 	orb_check(_actuator_inputs_mc, &updated);
 
 	if (updated) {
-		orb_copy(ORB_ID(actuator_controls_virtual_mc), _actuator_inputs_mc , &_actuators_mc_in);
+		orb_copy(ORB_ID(actuator_controls_virtual_mc), _actuator_inputs_mc, &_actuators_mc_in);
 	}
 }
 
@@ -247,7 +249,7 @@ void VtolAttitudeControl::actuator_controls_fw_poll()
 	orb_check(_actuator_inputs_fw, &updated);
 
 	if (updated) {
-		orb_copy(ORB_ID(actuator_controls_virtual_fw), _actuator_inputs_fw , &_actuators_fw_in);
+		orb_copy(ORB_ID(actuator_controls_virtual_fw), _actuator_inputs_fw, &_actuators_fw_in);
 	}
 }
 
@@ -260,7 +262,7 @@ void VtolAttitudeControl::vehicle_rates_sp_mc_poll()
 	orb_check(_mc_virtual_v_rates_sp_sub, &updated);
 
 	if (updated) {
-		orb_copy(ORB_ID(mc_virtual_rates_setpoint), _mc_virtual_v_rates_sp_sub , &_mc_virtual_v_rates_sp);
+		orb_copy(ORB_ID(mc_virtual_rates_setpoint), _mc_virtual_v_rates_sp_sub, &_mc_virtual_v_rates_sp);
 	}
 }
 
@@ -273,7 +275,7 @@ void VtolAttitudeControl::vehicle_rates_sp_fw_poll()
 	orb_check(_fw_virtual_v_rates_sp_sub, &updated);
 
 	if (updated) {
-		orb_copy(ORB_ID(fw_virtual_rates_setpoint), _fw_virtual_v_rates_sp_sub , &_fw_virtual_v_rates_sp);
+		orb_copy(ORB_ID(fw_virtual_rates_setpoint), _fw_virtual_v_rates_sp_sub, &_fw_virtual_v_rates_sp);
 	}
 }
 
@@ -287,7 +289,7 @@ VtolAttitudeControl::vehicle_airspeed_poll()
 	orb_check(_airspeed_sub, &updated);
 
 	if (updated) {
-		orb_copy(ORB_ID(airspeed), _airspeed_sub , &_airspeed);
+		orb_copy(ORB_ID(airspeed), _airspeed_sub, &_airspeed);
 	}
 }
 
@@ -331,7 +333,7 @@ VtolAttitudeControl::vehicle_battery_poll()
 	orb_check(_battery_status_sub, &updated);
 
 	if (updated) {
-		orb_copy(ORB_ID(battery_status), _battery_status_sub , &_batt_status);
+		orb_copy(ORB_ID(battery_status), _battery_status_sub, &_batt_status);
 	}
 }
 
@@ -364,7 +366,7 @@ VtolAttitudeControl::vehicle_local_pos_poll()
 	orb_check(_local_pos_sub, &updated);
 
 	if (updated) {
-		orb_copy(ORB_ID(vehicle_local_position), _local_pos_sub , &_local_pos);
+		orb_copy(ORB_ID(vehicle_local_position), _local_pos_sub, &_local_pos);
 	}
 
 }
@@ -380,7 +382,7 @@ VtolAttitudeControl::mc_virtual_att_sp_poll()
 	orb_check(_mc_virtual_att_sp_sub, &updated);
 
 	if (updated) {
-		orb_copy(ORB_ID(mc_virtual_attitude_setpoint), _mc_virtual_att_sp_sub , &_mc_virtual_att_sp);
+		orb_copy(ORB_ID(mc_virtual_attitude_setpoint), _mc_virtual_att_sp_sub, &_mc_virtual_att_sp);
 	}
 
 }
@@ -396,7 +398,7 @@ VtolAttitudeControl::fw_virtual_att_sp_poll()
 	orb_check(_fw_virtual_att_sp_sub, &updated);
 
 	if (updated) {
-		orb_copy(ORB_ID(fw_virtual_attitude_setpoint), _fw_virtual_att_sp_sub , &_fw_virtual_att_sp);
+		orb_copy(ORB_ID(fw_virtual_attitude_setpoint), _fw_virtual_att_sp_sub, &_fw_virtual_att_sp);
 	}
 
 }
@@ -411,7 +413,7 @@ VtolAttitudeControl::vehicle_cmd_poll()
 	orb_check(_vehicle_cmd_sub, &updated);
 
 	if (updated) {
-		orb_copy(ORB_ID(vehicle_command), _vehicle_cmd_sub , &_vehicle_cmd);
+		orb_copy(ORB_ID(vehicle_command), _vehicle_cmd_sub, &_vehicle_cmd);
 		handle_command();
 	}
 }
@@ -427,7 +429,7 @@ VtolAttitudeControl::tecs_status_poll()
 	orb_check(_tecs_status_sub, &updated);
 
 	if (updated) {
-		orb_copy(ORB_ID(tecs_status), _tecs_status_sub , &_tecs_status);
+		orb_copy(ORB_ID(tecs_status), _tecs_status_sub, &_tecs_status);
 	}
 }
 
@@ -442,7 +444,7 @@ VtolAttitudeControl::land_detected_poll()
 	orb_check(_land_detected_sub, &updated);
 
 	if (updated) {
-		orb_copy(ORB_ID(vehicle_land_detected), _land_detected_sub , &_land_detected);
+		orb_copy(ORB_ID(vehicle_land_detected), _land_detected_sub, &_land_detected);
 	}
 }
 
@@ -560,6 +562,16 @@ VtolAttitudeControl::parameters_update()
 	param_get(_params_handles.fw_min_alt, &v);
 	_params.fw_min_alt = v;
 
+	param_get(_params_handles.front_trans_time_openloop, &_params.front_trans_time_openloop);
+
+	param_get(_params_handles.front_trans_time_min, &_params.front_trans_time_min);
+
+	/*
+	 * Minimum transition time can be maximum 90 percent of the open loop transition time,
+	 * anything else makes no sense and can potentially lead to numerical problems.
+	 */
+	_params.front_trans_time_min = math::min(_params.front_trans_time_openloop * 0.9f,
+				       _params.front_trans_time_min);
 
 	// update the parameters of the instances of base VtolType
 	if (_vtol_type != nullptr) {
@@ -784,7 +796,6 @@ void VtolAttitudeControl::task_main()
 			if (got_new_data) {
 				_vtol_type->update_transition_state();
 				fill_mc_att_rates_sp();
-				publish_att_sp();
 			}
 
 		} else if (_vtol_type->get_mode() == EXTERNAL) {
@@ -825,7 +836,6 @@ void VtolAttitudeControl::task_main()
 
 	warnx("exit");
 	_control_task = -1;
-	return;
 }
 
 int

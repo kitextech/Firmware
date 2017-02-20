@@ -250,6 +250,7 @@ private:
 		_rc_channels_pub(nullptr),
 		_attitude_pub(nullptr),
 		_gpos_pub(nullptr),
+		_lpos_pub(nullptr),
 		_actuator_outputs_sub{},
 		_vehicle_attitude_sub(-1),
 		_manual_sub(-1),
@@ -277,7 +278,14 @@ private:
 			_actuator_outputs_sub[i] = -1;
 		}
 	}
-	~Simulator() { _instance = NULL; }
+	~Simulator()
+	{
+		if (_instance != nullptr) {
+			delete _instance;
+		}
+
+		_instance = NULL;
+	}
 
 	void initializeSensorData();
 

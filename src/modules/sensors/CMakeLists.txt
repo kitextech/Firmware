@@ -38,8 +38,12 @@ px4_add_module(
 	STACK_MAIN 1300
 	COMPILE_FLAGS
 	SRCS
+		voted_sensors_update.cpp
+		rc_update.cpp
 		sensors.cpp
 		sensors_init.cpp
+		parameters.cpp
+		temperature_compensation.cpp
 
 	DEPENDS
 		platforms__common

@@ -358,7 +358,7 @@ uORB::DeviceNode::ioctl(device::file_t *filp, int cmd, unsigned long arg)
 
 			if (arg == 0) {
 				if (sd->update_interval) {
-					delete(sd->update_interval);
+					delete (sd->update_interval);
 					sd->update_interval = nullptr;
 				}
 
@@ -424,7 +424,13 @@ uORB::DeviceNode::publish(const orb_metadata *meta, orb_advert_t handle, const v
 	uORB::DeviceNode *devnode = (uORB::DeviceNode *)handle;
 	int ret;
 
-	/* this is a bit risky, since we are trusting the handle in order to deref it */
+	/* check if the device handle is initialized */
+	if ((devnode == nullptr) || (meta == nullptr)) {
+		errno = EFAULT;
+		return ERROR;
+	}
+
+	/* check if the orb meta data matches the publication */
 	if (devnode->_meta != meta) {
 		errno = EINVAL;
 		return ERROR;
@@ -482,6 +488,28 @@ int uORB::DeviceNode::unadvertise(orb_advert_t handle)
 
 	return PX4_OK;
 }
+
+int16_t uORB::DeviceNode::topic_advertised(const orb_metadata *meta, int priority)
+{
+	uORBCommunicator::IChannel *ch = uORB::Manager::get_instance()->get_uorb_communicator();
+
+	if (ch != nullptr && meta != nullptr) {
+		return ch->topic_advertised(meta->o_name);
+	}
+
+	return -1;
+}
+/*
+//TODO: Check if we need this since we only unadvertise when things all shutdown and it doesn't actually remove the device
+int16_t uORB::DeviceNode::topic_unadvertised(const orb_metadata *meta, int priority)
+{
+	uORBCommunicator::IChannel *ch = uORB::Manager::get_instance()->get_uorb_communicator();
+	if (ch != nullptr && meta != nullptr) {
+		return ch->topic_unadvertised(meta->o_name);
+	}
+	return -1;
+}
+*/
 
 pollevent_t
 uORB::DeviceNode::poll_state(device::file_t *filp)
@@ -1069,8 +1097,10 @@ void uORB::DeviceMaster::showTop(char **topic_filter, int num_filters)
 #ifdef __PX4_QURT //QuRT has no poll()
 	int num_runs = 0;
 #else
+	const int stdin_fileno = 0;
+
 	struct pollfd fds;
-	fds.fd = 0; /* stdin */
+	fds.fd = stdin_fileno;
 	fds.events = POLLIN;
 #endif
 	bool quit = false;
@@ -1095,7 +1125,7 @@ void uORB::DeviceMaster::showTop(char **topic_filter, int num_filters)
 
 			if (ret > 0) {
 
-				ret = read(0, &c, 1);
+				ret = ::read(stdin_fileno, &c, 1);
 
 				if (ret) {
 					quit = true;

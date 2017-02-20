@@ -86,10 +86,9 @@
 #include <uORB/topics/vehicle_local_position_setpoint.h>
 #include <uORB/topics/vehicle_rates_setpoint.h>
 #include <uORB/topics/vehicle_status.h>
-#include <uORB/topics/vision_position_estimate.h>
 #include <uORB/topics/vtol_vehicle_status.h>
 #include <uORB/topics/wind_estimate.h>
-#include <uORB/topics/mount_status.h>
+#include <uORB/topics/mount_orientation.h>
 #include <uORB/topics/collision_report.h>
 #include <uORB/uORB.h>
 
@@ -319,7 +318,7 @@ protected:
 
 	void send(const hrt_abstime t)
 	{
-		struct vehicle_status_s status;
+		struct vehicle_status_s status = {};
 
 		/* always send the heartbeat, independent of the update status of the topics */
 		if (!_status_sub->update(&status)) {
@@ -377,7 +376,7 @@ private:
 
 	unsigned _write_err_count = 0;
 	static const unsigned write_err_threshold = 5;
-#ifndef __PX4_POSIX_EAGLE
+#if !defined(__PX4_POSIX_EAGLE) && !defined(__PX4_POSIX_EXCELSIOR)
 	FILE *_fp = nullptr;
 #endif
 
@@ -387,7 +386,7 @@ protected:
 
 	~MavlinkStreamStatustext()
 	{
-#ifndef __PX4_POSIX_EAGLE
+#if !defined(__PX4_POSIX_EAGLE) && !defined(__PX4_POSIX_EXCELSIOR)
 
 		if (_fp != nullptr) {
 			fclose(_fp);
@@ -401,11 +400,11 @@ protected:
 	{
 		if (!_mavlink->get_logbuffer()->empty()) {
 
-			struct mavlink_log_s mavlink_log;
+			struct mavlink_log_s mavlink_log = {};
 
 			if (_mavlink->get_logbuffer()->get(&mavlink_log)) {
 
-				mavlink_statustext_t msg;
+				mavlink_statustext_t msg = {};
 				msg.severity = mavlink_log.severity;
 				strncpy(msg.text, (const char *)mavlink_log.text, sizeof(msg.text));
 				msg.text[sizeof(msg.text) - 1] = '\0';
@@ -413,14 +412,14 @@ protected:
 				mavlink_msg_statustext_send_struct(_mavlink->get_channel(), &msg);
 
 // TODO: the logging doesn't work on Snapdragon yet because of file paths.
-#ifndef __PX4_POSIX_EAGLE
+#if !defined(__PX4_POSIX_EAGLE) && !defined(__PX4_POSIX_EXCELSIOR)
 				/* write log messages in first instance to disk
 				 * timestamp each message with gps time
 				 */
 				timespec ts;
 				px4_clock_gettime(CLOCK_REALTIME, &ts);
 				time_t gps_time_sec = ts.tv_sec + (ts.tv_nsec / 1e9);
-				struct tm tt;
+				struct tm tt = {};
 				gmtime_r(&gps_time_sec, &tt);
 				char tstamp[22];
 				strftime(tstamp, sizeof(tstamp) - 1, "%Y_%m_%d_%H_%M_%S", &tt);
@@ -445,7 +444,7 @@ protected:
 						} else {
 							(void)fputs("\n", _fp);
 #ifdef __PX4_NUTTX
-							fsync(_fp->fs_filedes);
+							fsync(fileno(_fp));
 #endif
 						}
 
@@ -466,7 +465,7 @@ protected:
 							fputs(msg.text, _fp);
 							fputs("\n", _fp);
 #ifdef __PX4_NUTTX
-							fsync(_fp->fs_filedes);
+							fsync(fileno(_fp));
 #endif
 
 						} else {
@@ -531,12 +530,12 @@ protected:
 
 	void send(const hrt_abstime t)
 	{
-		struct vehicle_command_s cmd;
+		struct vehicle_command_s cmd = {};
 
 		if (_cmd_sub->update(&_cmd_time, &cmd)) {
 			/* only send commands for other systems/components */
 			if (cmd.target_system != mavlink_system.sysid || cmd.target_component != mavlink_system.compid) {
-				mavlink_command_long_t msg;
+				mavlink_command_long_t msg = {};
 
 				msg.target_system = cmd.target_system;
 				msg.target_component = cmd.target_component;
@@ -625,7 +624,7 @@ protected:
 		}
 
 		if (updated_status || updated_battery || updated_cpuload) {
-			mavlink_sys_status_t msg;
+			mavlink_sys_status_t msg = {};
 
 			msg.onboard_control_sensors_present = status.onboard_control_sensors_present;
 			msg.onboard_control_sensors_enabled = status.onboard_control_sensors_enabled;
@@ -733,8 +732,8 @@ protected:
 
 	void send(const hrt_abstime t)
 	{
-		struct sensor_combined_s sensor;
-		struct differential_pressure_s differential_pressure;
+		struct sensor_combined_s sensor = {};
+		struct differential_pressure_s differential_pressure = {};
 
 		if (_sensor_sub->update(&_sensor_time, &sensor)) {
 			uint16_t fields_updated = 0;
@@ -765,7 +764,7 @@ protected:
 
 			_differential_pressure_sub->update(&_differential_pressure_time, &differential_pressure);
 
-			mavlink_highres_imu_t msg;
+			mavlink_highres_imu_t msg = {};
 
 			msg.time_usec = sensor.timestamp;
 			msg.xacc = sensor.accelerometer_m_s2[0];
@@ -842,7 +841,7 @@ protected:
 		struct vehicle_attitude_s att;
 
 		if (_att_sub->update(&_att_time, &att)) {
-			mavlink_attitude_t msg;
+			mavlink_attitude_t msg = {};
 			matrix::Eulerf euler = matrix::Quatf(att.q);
 			msg.time_boot_ms = att.timestamp / 1000;
 			msg.roll = euler.phi();
@@ -910,7 +909,7 @@ protected:
 		struct vehicle_attitude_s att;
 
 		if (_att_sub->update(&_att_time, &att)) {
-			mavlink_attitude_quaternion_t msg;
+			mavlink_attitude_quaternion_t msg = {};
 
 			msg.time_boot_ms = att.timestamp / 1000;
 			msg.q1 = att.q[0];
@@ -1015,7 +1014,7 @@ protected:
 		updated |= _airspeed_sub->update(&_airspeed_time, &airspeed);
 
 		if (updated) {
-			mavlink_vfr_hud_t msg;
+			mavlink_vfr_hud_t msg = {};
 			matrix::Eulerf euler = matrix::Quatf(att.q);
 			msg.airspeed = airspeed.indicated_airspeed_m_s;
 			msg.groundspeed = sqrtf(pos.vel_n * pos.vel_n + pos.vel_e * pos.vel_e);
@@ -1155,7 +1154,7 @@ protected:
 
 	void send(const hrt_abstime t)
 	{
-		mavlink_system_time_t msg;
+		mavlink_system_time_t msg = {};
 		timespec tv;
 
 		px4_clock_gettime(CLOCK_REALTIME, &tv);
@@ -1211,7 +1210,7 @@ protected:
 
 	void send(const hrt_abstime t)
 	{
-		mavlink_timesync_t msg;
+		mavlink_timesync_t msg = {};
 
 		msg.tc1 = 0;
 		msg.ts1 = hrt_absolute_time() * 1000; // boot time in nanoseconds
@@ -1412,7 +1411,7 @@ protected:
 		struct camera_trigger_s trigger;
 
 		if (_trigger_sub->update(&_trigger_time, &trigger)) {
-			mavlink_camera_trigger_t msg;
+			mavlink_camera_trigger_t msg = {};
 
 			msg.time_usec = trigger.timestamp;
 			msg.seq = trigger.seq;
@@ -1420,6 +1419,23 @@ protected:
 			/* ensure that only active trigger events are sent */
 			if (trigger.timestamp > 0) {
 				mavlink_msg_camera_trigger_send_struct(_mavlink->get_channel(), &msg);
+
+				/* send MAV_CMD_IMAGE_START_CAPTURE */
+				mavlink_command_long_t msg_cmd;
+
+				msg_cmd.target_system = mavlink_system.sysid;
+				msg_cmd.target_component = MAV_COMP_ID_CAMERA;
+				msg_cmd.command = MAV_CMD_IMAGE_START_CAPTURE;
+				msg_cmd.confirmation = 0;
+				msg_cmd.param1 = 0; // duration between 2 consecutive images (seconds)
+				msg_cmd.param2 = 1; // take 1 picture
+				msg_cmd.param3 = -1; // resolution (use the highest possible)
+				msg_cmd.param4 = NAN;
+				msg_cmd.param5 = NAN;
+				msg_cmd.param6 = NAN;
+				msg_cmd.param7 = NAN;
+
+				mavlink_msg_command_long_send_struct(_mavlink->get_channel(), &msg_cmd);
 			}
 		}
 	}
@@ -1479,14 +1495,14 @@ protected:
 
 	void send(const hrt_abstime t)
 	{
-		struct vehicle_global_position_s pos;
-		struct home_position_s home;
+		struct vehicle_global_position_s pos = {};
+		struct home_position_s home = {};
 
 		bool updated = _pos_sub->update(&_pos_time, &pos);
 		updated |= _home_sub->update(&_home_time, &home);
 
 		if (updated) {
-			mavlink_global_position_int_t msg;
+			mavlink_global_position_int_t msg = {};
 
 			msg.time_boot_ms = pos.timestamp / 1000;
 			msg.lat = pos.lat * 1e7;
@@ -1503,17 +1519,17 @@ protected:
 	}
 };
 
-class MavlinkStreamVisionPositionNED : public MavlinkStream
+class MavlinkStreamVisionPositionEstimate : public MavlinkStream
 {
 public:
 	const char *get_name() const
 	{
-		return MavlinkStreamVisionPositionNED::get_name_static();
+		return MavlinkStreamVisionPositionEstimate::get_name_static();
 	}
 
 	static const char *get_name_static()
 	{
-		return "VISION_POSITION_NED";
+		return "VISION_POSITION_ESTIMATE";
 	}
 
 	static uint16_t get_id_static()
@@ -1528,7 +1544,7 @@ public:
 
 	static MavlinkStream *new_instance(Mavlink *mavlink)
 	{
-		return new MavlinkStreamVisionPositionNED(mavlink);
+		return new MavlinkStreamVisionPositionEstimate(mavlink);
 	}
 
 	unsigned get_size()
@@ -1540,28 +1556,36 @@ private:
 	MavlinkOrbSubscription *_pos_sub;
 	uint64_t _pos_time;
 
+	MavlinkOrbSubscription *_att_sub;
+	uint64_t _att_time;
+
 	/* do not allow top copying this class */
-	MavlinkStreamVisionPositionNED(MavlinkStreamVisionPositionNED &);
-	MavlinkStreamVisionPositionNED &operator = (const MavlinkStreamVisionPositionNED &);
+	MavlinkStreamVisionPositionEstimate(MavlinkStreamVisionPositionEstimate &);
+	MavlinkStreamVisionPositionEstimate &operator = (const MavlinkStreamVisionPositionEstimate &);
 
 protected:
-	explicit MavlinkStreamVisionPositionNED(Mavlink *mavlink) : MavlinkStream(mavlink),
-		_pos_sub(_mavlink->add_orb_subscription(ORB_ID(vision_position_estimate))),
-		_pos_time(0)
+	explicit MavlinkStreamVisionPositionEstimate(Mavlink *mavlink) : MavlinkStream(mavlink),
+		_pos_sub(_mavlink->add_orb_subscription(ORB_ID(vehicle_vision_position))),
+		_pos_time(0),
+		_att_sub(_mavlink->add_orb_subscription(ORB_ID(vehicle_vision_attitude))),
+		_att_time(0)
 	{}
 
 	void send(const hrt_abstime t)
 	{
-		struct vision_position_estimate_s vpos;
-		memset(&vpos, 0, sizeof(vpos));
+		struct vehicle_local_position_s vpos = {};
+		struct vehicle_attitude_s vatt = {};
 
-		if (_pos_sub->update(&_pos_time, &vpos)) {
-			mavlink_vision_position_estimate_t vmsg;
+		bool att_updated = _att_sub->update(&_att_time, &vatt);
+		bool pos_updated = _pos_sub->update(&_pos_time, &vpos);
+
+		if (pos_updated || att_updated) {
+			mavlink_vision_position_estimate_t vmsg = {};
 			vmsg.usec = vpos.timestamp;
 			vmsg.x = vpos.x;
 			vmsg.y = vpos.y;
 			vmsg.z = vpos.z;
-			math::Quaternion q(vpos.q);
+			math::Quaternion q(vatt.q);
 			math::Vector<3> rpy = q.to_euler();
 			vmsg.roll = rpy(0);
 			vmsg.pitch = rpy(1);
@@ -1624,7 +1648,7 @@ protected:
 		struct vehicle_local_position_s pos;
 
 		if (_pos_sub->update(&_pos_time, &pos)) {
-			mavlink_local_position_ned_t msg;
+			mavlink_local_position_ned_t msg = {};
 
 			msg.time_boot_ms = pos.timestamp / 1000;
 			msg.x = pos.x;
@@ -1851,7 +1875,7 @@ protected:
 		struct att_pos_mocap_s mocap;
 
 		if (_mocap_sub->update(&_mocap_time, &mocap)) {
-			mavlink_att_pos_mocap_t msg;
+			mavlink_att_pos_mocap_t msg = {};
 
 			msg.time_usec = mocap.timestamp;
 			msg.q[0] = mocap.q[0];
@@ -1921,7 +1945,7 @@ protected:
 			struct home_position_s home;
 
 			if (_home_sub->update(&home)) {
-				mavlink_home_position_t msg;
+				mavlink_home_position_t msg = {};
 
 				msg.latitude = home.lat * 1e7;
 				msg.longitude = home.lon * 1e7;
@@ -1931,10 +1955,13 @@ protected:
 				msg.y = home.y;
 				msg.z = home.z;
 
-				msg.q[0] = 1.0f;
-				msg.q[1] = 0.0f;
-				msg.q[2] = 0.0f;
-				msg.q[3] = 0.0f;
+				matrix::Eulerf euler(0.0f, 0.0f, home.yaw);
+				matrix::Quatf q(euler);
+
+				msg.q[0] = q(0);
+				msg.q[1] = q(1);
+				msg.q[2] = q(2);
+				msg.q[3] = q(3);
 
 				msg.approach_x = 0.0f;
 				msg.approach_y = 0.0f;
@@ -2014,7 +2041,7 @@ protected:
 		struct actuator_outputs_s act;
 
 		if (_act_sub->update(&_act_time, &act)) {
-			mavlink_servo_output_raw_t msg;
+			mavlink_servo_output_raw_t msg = {};
 
 			msg.time_usec = act.timestamp;
 			msg.port = N;
@@ -2116,7 +2143,7 @@ protected:
 		struct actuator_controls_s att_ctrl;
 
 		if (_att_ctrl_sub->update(&_att_ctrl_time, &att_ctrl)) {
-			mavlink_actuator_control_target_t msg;
+			mavlink_actuator_control_target_t msg = {};
 
 			msg.time_usec = att_ctrl.timestamp;
 			msg.group_mlx = N;
@@ -2241,7 +2268,7 @@ protected:
 				for (unsigned i = 0; i < 8; i++) {
 					if (act.output[i] > PWM_DEFAULT_MIN / 2) {
 						if (i < n) {
-							/* scale PWM out PWM_DEFAULT_MIN..PWM_DEFAULT_MAX us to -1..1 for rotors */
+							/* scale PWM out PWM_DEFAULT_MIN..PWM_DEFAULT_MAX us to 0..1 for rotors */
 							out[i] = (act.output[i] - PWM_DEFAULT_MIN) / (PWM_DEFAULT_MAX - PWM_DEFAULT_MIN);
 
 						} else {
@@ -2276,7 +2303,7 @@ protected:
 				}
 			}
 
-			mavlink_hil_controls_t msg;
+			mavlink_hil_controls_t msg = {};
 
 			msg.time_usec = hrt_absolute_time();
 			msg.roll_ailerons = out[0];
@@ -2360,7 +2387,7 @@ protected:
 			uint8_t mavlink_state;
 			uint8_t mavlink_base_mode;
 			uint32_t mavlink_custom_mode;
-			mavlink_hil_actuator_controls_t msg;
+			mavlink_hil_actuator_controls_t msg = {};
 
 			get_mavlink_mode_state(&status, &mavlink_state, &mavlink_base_mode, &mavlink_custom_mode);
 
@@ -2503,7 +2530,7 @@ protected:
 		struct position_setpoint_triplet_s pos_sp_triplet;
 
 		if (_pos_sp_triplet_sub->update(&pos_sp_triplet)) {
-			mavlink_position_target_global_int_t msg{};
+			mavlink_position_target_global_int_t msg = {};
 
 			msg.time_boot_ms = hrt_absolute_time() / 1000;
 			msg.coordinate_frame = MAV_FRAME_GLOBAL;
@@ -2569,7 +2596,7 @@ protected:
 		struct vehicle_local_position_setpoint_s pos_sp;
 
 		if (_pos_sp_sub->update(&_pos_sp_time, &pos_sp)) {
-			mavlink_position_target_local_ned_t msg{};
+			mavlink_position_target_local_ned_t msg = {};
 
 			msg.time_boot_ms = pos_sp.timestamp / 1000;
 			msg.coordinate_frame = MAV_FRAME_LOCAL_NED;
@@ -2643,18 +2670,20 @@ protected:
 
 	void send(const hrt_abstime t)
 	{
-		struct vehicle_attitude_setpoint_s att_sp;
+		struct vehicle_attitude_setpoint_s att_sp = {};
 
 		if (_att_sp_sub->update(&_att_sp_time, &att_sp)) {
 
-			struct vehicle_rates_setpoint_s att_rates_sp;
+			struct vehicle_rates_setpoint_s att_rates_sp = {};
 			(void)_att_rates_sp_sub->update(&_att_rates_sp_time, &att_rates_sp);
 
-			mavlink_attitude_target_t msg{};
+			mavlink_attitude_target_t msg = {};
 
 			msg.time_boot_ms = att_sp.timestamp / 1000;
+
 			if (att_sp.q_d_valid) {
 				memcpy(&msg.q[0], &att_sp.q_d[0], sizeof(msg.q));
+
 			} else {
 				mavlink_euler_to_quaternion(att_sp.roll_body, att_sp.pitch_body, att_sp.yaw_body, msg.q);
 			}
@@ -2720,12 +2749,12 @@ protected:
 
 	void send(const hrt_abstime t)
 	{
-		struct rc_input_values rc;
+		struct rc_input_values rc = {};
 
 		if (_rc_sub->update(&_rc_time, &rc)) {
 
 			/* send RC channel data and RSSI */
-			mavlink_rc_channels_t msg;
+			mavlink_rc_channels_t msg = {};
 
 			msg.time_boot_ms = rc.timestamp / 1000;
 			msg.chancount = rc.channel_count;
@@ -2821,10 +2850,10 @@ protected:
 
 	void send(const hrt_abstime t)
 	{
-		struct manual_control_setpoint_s manual;
+		struct manual_control_setpoint_s manual = {};
 
 		if (_manual_sub->update(&_manual_time, &manual)) {
-			mavlink_manual_control_t msg;
+			mavlink_manual_control_t msg = {};
 
 			msg.target = mavlink_system.sysid;
 			msg.x = manual.x * 1000;
@@ -2894,10 +2923,10 @@ protected:
 
 	void send(const hrt_abstime t)
 	{
-		struct optical_flow_s flow;
+		struct optical_flow_s flow = {};
 
 		if (_flow_sub->update(&_flow_time, &flow)) {
-			mavlink_optical_flow_rad_t msg;
+			mavlink_optical_flow_rad_t msg = {};
 
 			msg.time_usec = flow.timestamp;
 			msg.sensor_id = flow.sensor_id;
@@ -2967,10 +2996,10 @@ protected:
 
 	void send(const hrt_abstime t)
 	{
-		struct debug_key_value_s debug;
+		struct debug_key_value_s debug = {};
 
 		if (_debug_sub->update(&_debug_time, &debug)) {
-			mavlink_named_value_float_t msg;
+			mavlink_named_value_float_t msg = {};
 
 			msg.time_boot_ms = debug.timestamp_ms;
 			memcpy(msg.name, debug.key, sizeof(msg.name));
@@ -3106,7 +3135,7 @@ protected:
 		struct vehicle_status_s status = {};
 		(void)_status_sub->update(&status);
 
-		mavlink_command_long_t msg;
+		mavlink_command_long_t msg = {};
 
 		msg.target_system = mavlink_system.sysid;
 		msg.target_component = MAV_COMP_ID_ALL;
@@ -3175,11 +3204,11 @@ protected:
 
 	void send(const hrt_abstime t)
 	{
-		struct distance_sensor_s dist_sensor;
+		struct distance_sensor_s dist_sensor = {};
 
 		if (_distance_sensor_sub->update(&_dist_sensor_time, &dist_sensor)) {
 
-			mavlink_distance_sensor_t msg;
+			mavlink_distance_sensor_t msg = {};
 
 			msg.time_boot_ms = dist_sensor.timestamp / 1000; /* us to ms */
 
@@ -3261,7 +3290,7 @@ protected:
 	explicit MavlinkStreamExtendedSysState(Mavlink *mavlink) : MavlinkStream(mavlink),
 		_status_sub(_mavlink->add_orb_subscription(ORB_ID(vehicle_status))),
 		_landed_sub(_mavlink->add_orb_subscription(ORB_ID(vehicle_land_detected))),
-		_msg{}
+		_msg()
 	{
 
 		_msg.vtol_state = MAV_VTOL_STATE_UNDEFINED;
@@ -3270,8 +3299,8 @@ protected:
 
 	void send(const hrt_abstime t)
 	{
-		struct vehicle_status_s status;
-		struct vehicle_land_detected_s land_detected;
+		struct vehicle_status_s status = {};
+		struct vehicle_land_detected_s land_detected = {};
 		bool updated = false;
 
 		if (_status_sub->update(&status)) {
@@ -3281,7 +3310,7 @@ protected:
 				if (!status.in_transition_mode && status.is_rotary_wing) {
 					_msg.vtol_state = MAV_VTOL_STATE_MC;
 
-				} else if (!status.in_transition_mode){
+				} else if (!status.in_transition_mode) {
 					_msg.vtol_state = MAV_VTOL_STATE_FW;
 
 				} else if (status.in_transition_mode && status.in_transition_to_fw) {
@@ -3374,17 +3403,23 @@ protected:
 
 	void send(const hrt_abstime t)
 	{
-		mavlink_altitude_t msg;
+		mavlink_altitude_t msg = {};
 		bool updated = false;
 		float global_alt = 0.0f;
 
 		{
 			struct vehicle_global_position_s global_pos;
 			updated |= _global_pos_sub->update(&_global_pos_time, &global_pos);
-			msg.altitude_amsl = (_global_pos_time > 0) ? global_pos.alt : NAN;
-			global_alt = global_pos.alt;
 
-			if (global_pos.terrain_alt_valid) {
+			if (_global_pos_time != 0) {
+				msg.altitude_amsl = global_pos.alt;
+				global_alt = global_pos.alt;
+
+			} else {
+				msg.altitude_amsl = NAN;
+			}
+
+			if (_global_pos_time != 0 && global_pos.terrain_alt_valid) {
 				msg.altitude_terrain = global_pos.terrain_alt;
 				msg.bottom_clearance = global_pos.alt - global_pos.terrain_alt;
 
@@ -3413,13 +3448,13 @@ protected:
 		}
 
 		{
-			struct home_position_s home;
+			struct home_position_s home = {};
 			updated |= _home_sub->update(&_home_time, &home);
 
-			if (_global_pos_time > 0 and _home_time > 0) {
+			if (_global_pos_time > 0 && _home_time > 0) {
 				msg.altitude_relative = global_alt - home.alt;
 
-			} else if (_local_pos_time > 0 and _home_time > 0) {
+			} else if (_local_pos_time > 0 && _home_time > 0) {
 				msg.altitude_relative = msg.altitude_local;
 
 			} else {
@@ -3432,7 +3467,7 @@ protected:
 			msg.time_usec = hrt_absolute_time();
 
 			{
-				struct sensor_combined_s sensor;
+				struct sensor_combined_s sensor = {};
 				(void)_sensor_sub->update(&_sensor_time, &sensor);
 				msg.altitude_monotonic = (_sensor_time > 0) ? sensor.baro_alt_meter : NAN;
 			}
@@ -3513,7 +3548,7 @@ protected:
 			msg.var_horiz = wind_estimate.covariance_north + wind_estimate.covariance_east;
 			msg.var_vert = 0.0f;
 
-			struct vehicle_global_position_s global_pos;
+			struct vehicle_global_position_s global_pos = {};
 			_global_pos_sub->update(&_global_pos_time, &global_pos);
 			msg.wind_alt = (_global_pos_time > 0) ? global_pos.alt : NAN;
 
@@ -3526,22 +3561,22 @@ protected:
 	}
 };
 
-class MavlinkStreamMountStatus : public MavlinkStream
+class MavlinkStreamMountOrientation : public MavlinkStream
 {
 public:
 	const char *get_name() const
 	{
-		return MavlinkStreamMountStatus::get_name_static();
+		return MavlinkStreamMountOrientation::get_name_static();
 	}
 
 	static const char *get_name_static()
 	{
-		return "MOUNT_STATUS";
+		return "MOUNT_ORIENTATION";
 	}
 
 	static uint16_t get_id_static()
 	{
-		return MAVLINK_MSG_ID_MOUNT_STATUS;
+		return MAVLINK_MSG_ID_MOUNT_ORIENTATION;
 	}
 
 	uint16_t get_id()
@@ -3551,43 +3586,343 @@ public:
 
 	static MavlinkStream *new_instance(Mavlink *mavlink)
 	{
-		return new MavlinkStreamMountStatus(mavlink);
+		return new MavlinkStreamMountOrientation(mavlink);
 	}
 
 	unsigned get_size()
 	{
-		return (_mount_status_time > 0) ? MAVLINK_MSG_ID_MOUNT_STATUS_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES : 0;
+		return (_mount_orientation_time > 0) ? MAVLINK_MSG_ID_MOUNT_ORIENTATION_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES : 0;
 	}
 
 private:
-	MavlinkOrbSubscription *_mount_status_sub;
-	uint64_t _mount_status_time;
+	MavlinkOrbSubscription *_mount_orientation_sub;
+	uint64_t _mount_orientation_time;
 
 	/* do not allow top copying this class */
-	MavlinkStreamMountStatus(MavlinkStreamMountStatus &);
-	MavlinkStreamMountStatus &operator = (const MavlinkStreamMountStatus &);
+	MavlinkStreamMountOrientation(MavlinkStreamMountOrientation &);
+	MavlinkStreamMountOrientation &operator = (const MavlinkStreamMountOrientation &);
 
 protected:
-	explicit MavlinkStreamMountStatus(Mavlink *mavlink) : MavlinkStream(mavlink),
-		_mount_status_sub(_mavlink->add_orb_subscription(ORB_ID(mount_status))),
-		_mount_status_time(0)
+	explicit MavlinkStreamMountOrientation(Mavlink *mavlink) : MavlinkStream(mavlink),
+		_mount_orientation_sub(_mavlink->add_orb_subscription(ORB_ID(mount_orientation))),
+		_mount_orientation_time(0)
 	{}
 
 	void send(const hrt_abstime t)
 	{
-		struct mount_status_s mount_status = {};
+		struct mount_orientation_s mount_orientation = {};
 
-		bool updated = _mount_status_sub->update(&_mount_status_time, &mount_status);
+		bool updated = _mount_orientation_sub->update(&_mount_orientation_time, &mount_orientation);
 
 		if (updated) {
 
-			mavlink_mount_status_t msg = {};
+			mavlink_mount_orientation_t msg = {};
 
-			msg.roll = 180.0f / M_PI_F * mount_status.attitude_euler_angle[0];
-			msg.pitch = 180.0f / M_PI_F * mount_status.attitude_euler_angle[1];
-			msg.yaw = 180.0f / M_PI_F * mount_status.attitude_euler_angle[2];
+			msg.roll = 180.0f / M_PI_F * mount_orientation.attitude_euler_angle[0];
+			msg.pitch = 180.0f / M_PI_F * mount_orientation.attitude_euler_angle[1];
+			msg.yaw = 180.0f / M_PI_F * mount_orientation.attitude_euler_angle[2];
 
-			mavlink_msg_mount_status_send_struct(_mavlink->get_channel(), &msg);
+			mavlink_msg_mount_orientation_send_struct(_mavlink->get_channel(), &msg);
+		}
+	}
+};
+
+class MavlinkStreamHighLatency : public MavlinkStream
+{
+public:
+	const char *get_name() const
+	{
+		return MavlinkStreamHighLatency::get_name_static();
+	}
+
+	static const char *get_name_static()
+	{
+		return "HIGH_LATENCY";
+	}
+
+	static uint16_t get_id_static()
+	{
+		return MAVLINK_MSG_ID_HIGH_LATENCY;
+	}
+
+	uint16_t get_id()
+	{
+		return get_id_static();
+	}
+
+	static MavlinkStream *new_instance(Mavlink *mavlink)
+	{
+		return new MavlinkStreamHighLatency(mavlink);
+	}
+
+	unsigned get_size()
+	{
+		return MAVLINK_MSG_ID_HIGH_LATENCY_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES;
+	}
+
+private:
+	MavlinkOrbSubscription *_actuator_sub;
+	uint64_t _actuator_time;
+
+	MavlinkOrbSubscription *_airspeed_sub;
+	uint64_t _airspeed_time;
+
+	MavlinkOrbSubscription *_attitude_sp_sub;
+	uint64_t _attitude_sp_time;
+
+	MavlinkOrbSubscription *_attitude_sub;
+	uint64_t _attitude_time;
+
+	MavlinkOrbSubscription *_battery_sub;
+	uint64_t _battery_time;
+
+	MavlinkOrbSubscription *_fw_pos_ctrl_status_sub;
+	uint64_t _fw_pos_ctrl_status_time;
+
+	MavlinkOrbSubscription *_global_pos_sub;
+	uint64_t _global_pos_time;
+
+	MavlinkOrbSubscription *_gps_sub;
+	uint64_t _gps_time;
+
+	MavlinkOrbSubscription *_home_sub;
+	uint64_t _home_time;
+
+	MavlinkOrbSubscription *_landed_sub;
+	uint64_t _landed_time;
+
+	MavlinkOrbSubscription *_mission_result_sub;
+	uint64_t _mission_result_time;
+
+	MavlinkOrbSubscription *_sensor_sub;
+	uint64_t _sensor_time;
+
+	MavlinkOrbSubscription *_status_sub;
+	uint64_t _status_time;
+
+	MavlinkOrbSubscription *_tecs_status_sub;
+	uint64_t _tecs_time;
+
+	MavlinkOrbSubscription *_wind_sub;
+	uint64_t _wind_time;
+
+	/* do not allow top copying this class */
+	MavlinkStreamHighLatency(MavlinkStreamHighLatency &);
+	MavlinkStreamHighLatency &operator = (const MavlinkStreamHighLatency &);
+
+protected:
+	explicit MavlinkStreamHighLatency(Mavlink *mavlink) : MavlinkStream(mavlink),
+		_actuator_sub(_mavlink->add_orb_subscription(ORB_ID(actuator_controls_0))),
+		_actuator_time(0),
+		_airspeed_sub(_mavlink->add_orb_subscription(ORB_ID(airspeed))),
+		_airspeed_time(0),
+		_attitude_sp_sub(_mavlink->add_orb_subscription(ORB_ID(fw_pos_ctrl_status))),
+		_attitude_sp_time(0),
+		_attitude_sub(_mavlink->add_orb_subscription(ORB_ID(vehicle_attitude))),
+		_attitude_time(0),
+		_battery_sub(_mavlink->add_orb_subscription(ORB_ID(battery_status))),
+		_battery_time(0),
+		_fw_pos_ctrl_status_sub(_mavlink->add_orb_subscription(ORB_ID(fw_pos_ctrl_status))),
+		_fw_pos_ctrl_status_time(0),
+		_global_pos_sub(_mavlink->add_orb_subscription(ORB_ID(vehicle_global_position))),
+		_global_pos_time(0),
+		_gps_sub(_mavlink->add_orb_subscription(ORB_ID(vehicle_gps_position))),
+		_gps_time(0),
+		_home_sub(_mavlink->add_orb_subscription(ORB_ID(home_position))),
+		_home_time(0),
+		_landed_sub(_mavlink->add_orb_subscription(ORB_ID(vehicle_land_detected))),
+		_landed_time(0),
+		_mission_result_sub(_mavlink->add_orb_subscription(ORB_ID(mission_result))),
+		_mission_result_time(0),
+		_sensor_sub(_mavlink->add_orb_subscription(ORB_ID(sensor_combined))),
+		_sensor_time(0),
+		_status_sub(_mavlink->add_orb_subscription(ORB_ID(vehicle_status))),
+		_status_time(0),
+		_tecs_status_sub(_mavlink->add_orb_subscription(ORB_ID(tecs_status))),
+		_tecs_time(0)
+	{}
+
+	void send(const hrt_abstime t)
+	{
+		struct actuator_controls_s actuator = {};
+		struct airspeed_s airspeed = {};
+		struct battery_status_s battery = {};
+		struct fw_pos_ctrl_status_s fw_pos_ctrl_status = {};
+		struct home_position_s home = {};
+		struct mission_result_s mission_result = {};
+		struct sensor_combined_s sensor = {};
+		struct tecs_status_s tecs_status = {};
+		struct vehicle_attitude_s attitude = {};
+		struct vehicle_attitude_setpoint_s attitude_sp = {};
+		struct vehicle_global_position_s global_pos = {};
+		struct vehicle_gps_position_s gps = {};
+		struct vehicle_land_detected_s land_detected = {};
+		struct vehicle_status_s status = {};
+
+		bool updated = _status_sub->update(&_status_time, &status);
+		updated |= _actuator_sub->update(&_actuator_time, &actuator);
+		updated |= _airspeed_sub->update(&_airspeed_time, &airspeed);
+		updated |= _attitude_sp_sub->update(&_attitude_sp_time, &attitude_sp);
+		updated |= _attitude_sub->update(&_attitude_time, &attitude);
+		updated |= _battery_sub->update(&_battery_time, &battery);
+		updated |= _fw_pos_ctrl_status_sub->update(&_fw_pos_ctrl_status_time, &fw_pos_ctrl_status);
+		updated |= _global_pos_sub->update(&_global_pos_time, &global_pos);
+		updated |= _gps_sub->update(&_gps_time, &gps);
+		updated |= _home_sub->update(&_home_time, &home);
+		updated |= _landed_sub->update(&_landed_time, &land_detected);
+		updated |= _mission_result_sub->update(&_mission_result_time, &mission_result);
+		updated |= _sensor_sub->update(&_sensor_time, &sensor);
+		updated |= _tecs_status_sub->update(&_tecs_time, &tecs_status);
+
+		if (updated) {
+			mavlink_high_latency_t msg = {};
+
+			//timespec tv;
+			//px4_clock_gettime(CLOCK_REALTIME, &tv);
+			//msg.time_usec = (uint64_t)tv.tv_sec * 1000000 + tv.tv_nsec / 1000;
+
+			msg.base_mode = 0;
+			msg.custom_mode = 0;
+			uint8_t sys_status;
+			get_mavlink_mode_state(&status, &sys_status, &msg.base_mode, &msg.custom_mode);
+
+			matrix::Eulerf euler = matrix::Quatf(attitude.q);
+			msg.roll = math::degrees(euler.phi()) * 100;
+			msg.pitch = math::degrees(euler.theta()) * 100;
+			msg.heading = math::degrees(_wrap_2pi(euler.psi())) * 100;
+
+			//msg.roll_sp = math::degrees(attitude_sp.roll_body) * 100;
+			//msg.pitch_sp = math::degrees(attitude_sp.pitch_body) * 100;
+			msg.heading_sp = math::degrees(_wrap_2pi(attitude_sp.yaw_body)) * 100;
+
+			if (status.arming_state == vehicle_status_s::ARMING_STATE_ARMED) {
+				msg.throttle = actuator.control[actuator_controls_s::INDEX_THROTTLE] * 100;
+
+			} else {
+				msg.throttle = 0;
+			}
+
+			msg.latitude = global_pos.lat * 1e7;
+			msg.longitude = global_pos.lon * 1e7;
+
+			//msg.altitude_home = (_home_time > 0) ? (global_pos.alt - home.alt) : NAN;
+			msg.altitude_amsl = (_global_pos_time > 0) ? global_pos.alt : NAN;
+
+			msg.altitude_sp = (_tecs_time > 0) ? (tecs_status.altitudeSp - home.alt) : NAN;
+
+			msg.airspeed = airspeed.indicated_airspeed_m_s * 100.0f;
+			msg.groundspeed = sqrtf(global_pos.vel_n * global_pos.vel_n + global_pos.vel_e * global_pos.vel_e) * 100.0f;
+			msg.climb_rate = -global_pos.vel_d;
+
+			msg.gps_nsat = gps.satellites_used;
+			msg.gps_fix_type = gps.fix_type;
+
+			msg.landed_state = land_detected.landed ? MAV_LANDED_STATE_ON_GROUND : MAV_LANDED_STATE_IN_AIR;
+
+			msg.battery_remaining = (battery.connected) ? battery.remaining * 100.0f : -1;
+
+			msg.temperature = sensor.baro_temp_celcius;
+			msg.temperature_air = airspeed.air_temperature_celsius;
+
+			msg.wp_num = mission_result.seq_current;
+			msg.wp_distance = fw_pos_ctrl_status.wp_dist;
+
+			mavlink_msg_high_latency_send_struct(_mavlink->get_channel(), &msg);
+		}
+	}
+};
+
+
+class MavlinkStreamGroundTruth : public MavlinkStream
+{
+public:
+	const char *get_name() const
+	{
+		return MavlinkStreamGroundTruth::get_name_static();
+	}
+
+	static const char *get_name_static()
+	{
+		return "GROUND_TRUTH";
+	}
+
+	static uint16_t get_id_static()
+	{
+		return MAVLINK_MSG_ID_HIL_STATE_QUATERNION;
+	}
+
+	uint16_t get_id()
+	{
+		return get_id_static();
+	}
+
+	static MavlinkStream *new_instance(Mavlink *mavlink)
+	{
+		return new MavlinkStreamGroundTruth(mavlink);
+	}
+
+	unsigned get_size()
+	{
+		return (_att_time > 0 || _gpos_time > 0) ? MAVLINK_MSG_ID_HIL_STATE_QUATERNION_LEN +
+		       MAVLINK_NUM_NON_PAYLOAD_BYTES : 0;
+	}
+
+private:
+	MavlinkOrbSubscription *_att_sub;
+	MavlinkOrbSubscription *_gpos_sub;
+	uint64_t _att_time;
+	uint64_t _gpos_time;
+	struct vehicle_attitude_s _att;
+	struct vehicle_global_position_s _gpos;
+
+	/* do not allow top copying this class */
+	MavlinkStreamGroundTruth(MavlinkStreamGroundTruth &);
+	MavlinkStreamGroundTruth &operator = (const MavlinkStreamGroundTruth &);
+
+protected:
+	explicit MavlinkStreamGroundTruth(Mavlink *mavlink) : MavlinkStream(mavlink),
+		_att_sub(_mavlink->add_orb_subscription(ORB_ID(vehicle_attitude_groundtruth))),
+		_gpos_sub(_mavlink->add_orb_subscription(ORB_ID(vehicle_global_position_groundtruth))),
+		_att_time(0),
+		_gpos_time(0),
+		_att(),
+		_gpos()
+	{}
+
+	void send(const hrt_abstime t)
+	{
+		bool att_updated = _att_sub->update(&_att_time, &_att);
+		bool gpos_updated = _gpos_sub->update(&_gpos_time, &_gpos);
+
+		if (att_updated || gpos_updated) {
+
+			mavlink_hil_state_quaternion_t msg = {};
+
+			if (att_updated) {
+				msg.attitude_quaternion[0] = _att.q[0];
+				msg.attitude_quaternion[1] = _att.q[1];
+				msg.attitude_quaternion[2] = _att.q[2];
+				msg.attitude_quaternion[3] = _att.q[3];
+				msg.rollspeed = _att.rollspeed;
+				msg.pitchspeed = _att.pitchspeed;
+				msg.yawspeed = _att.yawspeed;
+			}
+
+			if (gpos_updated) {
+				msg.lat = _gpos.lat;
+				msg.lon = _gpos.lon;
+				msg.alt = _gpos.alt;
+				msg.vx = _gpos.vel_n;
+				msg.vy = _gpos.vel_e;
+				msg.vz = _gpos.vel_d;
+				msg.ind_airspeed = 0;
+				msg.true_airspeed = 0;
+				msg.xacc = 0;
+				msg.yacc = 0;
+				msg.zacc = 0;
+			}
+
+			mavlink_msg_hil_state_quaternion_send_struct(_mavlink->get_channel(), &msg);
 		}
 	}
 };
@@ -3606,7 +3941,7 @@ const StreamListItem *streams_list[] = {
 	new StreamListItem(&MavlinkStreamTimesync::new_instance, &MavlinkStreamTimesync::get_name_static, &MavlinkStreamTimesync::get_id_static),
 	new StreamListItem(&MavlinkStreamGlobalPositionInt::new_instance, &MavlinkStreamGlobalPositionInt::get_name_static, &MavlinkStreamGlobalPositionInt::get_id_static),
 	new StreamListItem(&MavlinkStreamLocalPositionNED::new_instance, &MavlinkStreamLocalPositionNED::get_name_static, &MavlinkStreamLocalPositionNED::get_id_static),
-	new StreamListItem(&MavlinkStreamVisionPositionNED::new_instance, &MavlinkStreamVisionPositionNED::get_name_static, &MavlinkStreamVisionPositionNED::get_id_static),
+	new StreamListItem(&MavlinkStreamVisionPositionEstimate::new_instance, &MavlinkStreamVisionPositionEstimate::get_name_static, &MavlinkStreamVisionPositionEstimate::get_id_static),
 	new StreamListItem(&MavlinkStreamLocalPositionNEDCOV::new_instance, &MavlinkStreamLocalPositionNEDCOV::get_name_static, &MavlinkStreamLocalPositionNEDCOV::get_id_static),
 	new StreamListItem(&MavlinkStreamEstimatorStatus::new_instance, &MavlinkStreamEstimatorStatus::get_name_static, &MavlinkStreamEstimatorStatus::get_id_static),
 	new StreamListItem(&MavlinkStreamAttPosMocap::new_instance, &MavlinkStreamAttPosMocap::get_name_static, &MavlinkStreamAttPosMocap::get_id_static),
@@ -3637,6 +3972,8 @@ const StreamListItem *streams_list[] = {
 	new StreamListItem(&MavlinkStreamADSBVehicle::new_instance, &MavlinkStreamADSBVehicle::get_name_static, &MavlinkStreamADSBVehicle::get_id_static),
 	new StreamListItem(&MavlinkStreamCollision::new_instance, &MavlinkStreamCollision::get_name_static, &MavlinkStreamCollision::get_id_static),
 	new StreamListItem(&MavlinkStreamWind::new_instance, &MavlinkStreamWind::get_name_static, &MavlinkStreamWind::get_id_static),
-	new StreamListItem(&MavlinkStreamMountStatus::new_instance, &MavlinkStreamMountStatus::get_name_static, &MavlinkStreamMountStatus::get_id_static),
+	new StreamListItem(&MavlinkStreamMountOrientation::new_instance, &MavlinkStreamMountOrientation::get_name_static, &MavlinkStreamMountOrientation::get_id_static),
+	new StreamListItem(&MavlinkStreamHighLatency::new_instance, &MavlinkStreamHighLatency::get_name_static, &MavlinkStreamWind::get_id_static),
+	new StreamListItem(&MavlinkStreamGroundTruth::new_instance, &MavlinkStreamGroundTruth::get_name_static, &MavlinkStreamGroundTruth::get_id_static),
 	nullptr
 };

@@ -41,6 +41,7 @@
 
 #include <px4_config.h>
 #include <px4_posix.h>
+#include <px4_tasks.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -57,7 +58,6 @@
 #include <uORB/topics/control_state.h>
 #include <uORB/topics/vehicle_control_mode.h>
 #include <uORB/topics/vehicle_global_position.h>
-#include <uORB/topics/vision_position_estimate.h>
 #include <uORB/topics/att_pos_mocap.h>
 #include <uORB/topics/airspeed.h>
 #include <uORB/topics/parameter_update.h>
@@ -68,7 +68,6 @@
 #include <mathlib/math/filter/LowPassFilter2p.hpp>
 #include <lib/geo/geo.h>
 
-#include <systemlib/systemlib.h>
 #include <systemlib/param/param.h>
 #include <systemlib/perf_counter.h>
 #include <systemlib/err.h>
@@ -157,7 +156,7 @@ private:
 	Vector<3>	_accel;
 	Vector<3>	_mag;
 
-	vision_position_estimate_s _vision = {};
+	vehicle_attitude_s _vision = {};
 	Vector<3>	_vision_hdg;
 
 	att_pos_mocap_s _mocap = {};
@@ -188,9 +187,6 @@ private:
 	bool		_ext_hdg_good = false;
 
 	orb_advert_t	_mavlink_log_pub = nullptr;
-
-	perf_counter_t _update_perf;
-	perf_counter_t _loop_perf;
 
 	void update_parameters(bool force);
 
@@ -294,7 +290,7 @@ void AttitudeEstimatorQ::task_main()
 
 	_sensors_sub = orb_subscribe(ORB_ID(sensor_combined));
 
-	_vision_sub = orb_subscribe(ORB_ID(vision_position_estimate));
+	_vision_sub = orb_subscribe(ORB_ID(vehicle_vision_attitude));
 	_mocap_sub = orb_subscribe(ORB_ID(att_pos_mocap));
 
 	_airspeed_sub = orb_subscribe(ORB_ID(airspeed));
@@ -374,7 +370,7 @@ void AttitudeEstimatorQ::task_main()
 		orb_check(_mocap_sub, &mocap_updated);
 
 		if (vision_updated) {
-			orb_copy(ORB_ID(vision_position_estimate), _vision_sub, &_vision);
+			orb_copy(ORB_ID(vehicle_vision_attitude), _vision_sub, &_vision);
 			math::Quaternion q(_vision.q);
 
 			math::Matrix<3, 3> Rvis = q.to_dcm();
@@ -495,10 +491,13 @@ void AttitudeEstimatorQ::task_main()
 
 			/* attitude rates for control state */
 			ctrl_state.roll_rate = _rates(0);
-
 			ctrl_state.pitch_rate = _rates(1);
-
 			ctrl_state.yaw_rate = _rates(2);
+
+			/* TODO get bias estimates from estimator */
+			ctrl_state.roll_rate_bias = 0.0f;
+			ctrl_state.pitch_rate_bias = 0.0f;
+			ctrl_state.yaw_rate_bias = 0.0f;
 
 			ctrl_state.airspeed_valid = false;
 

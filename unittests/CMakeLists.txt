@@ -1,22 +1,30 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.1)
 
-if("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang")
+if("${CMAKE_C_COMPILER_ID}" MATCHES "Clang")
 	add_compile_options(-Qunused-arguments )
 endif()
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
 	add_compile_options(-Qunused-arguments)
 endif()
 
 project(px4_unittests)
 enable_testing()
 
+message(STATUS ${CONFIG})
+
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -std=gnu99 -g")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -std=gnu++0x -g -fno-exceptions -fno-rtti -fno-threadsafe-statics -DCONFIG_WCHAR_BUILTIN -D__CUSTOM_FILE_IO__")
+
+# code coverage
+if ($ENV{PX4_CODE_COVERAGE} MATCHES "1")
+	message(STATUS "Code coverage build flags enabled")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 -g3 -fprofile-arcs -ftest-coverage --coverage")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -g3 -fprofile-arcs -ftest-coverage --coverage")
+endif()
 
 if (NOT PX4_SOURCE_DIR)
 	set(PX4_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/..")
 endif()
-
 
 set(GTEST_DIR ${PX4_SOURCE_DIR}/unittests/googletest)
 add_subdirectory(${GTEST_DIR})
@@ -84,7 +92,7 @@ function(add_gtest)
 		else()
 			target_link_libraries(${test_name} gtest_main pthread rt ${PX4_PLATFORM})
 		endif()
-		add_test(NAME ${test_name} COMMAND ${test_name} WORKING_DIRECTORY ${PX4_SOURCE_DIR})
+		add_test(NAME ${test_name} COMMAND ${test_name} --gtest_output=xml WORKING_DIRECTORY ${PX4_BINARY_DIR})
 		add_dependencies(check ${test_name})
 	endforeach()
 endfunction()
@@ -97,7 +105,7 @@ endfunction()
 #    add_gtest(example_test)
 
 # param_test
-add_executable(param_test param_test.cpp uorb_stub.cpp
+add_executable(param_test setup.cpp param_test.cpp uorb_stub.cpp
 						${PX4_SRC}/modules/systemlib/bson/tinybson.c
 						${PX4_SRC}/modules/systemlib/param/param.c)
 target_link_libraries(param_test ${PX4_PLATFORM})

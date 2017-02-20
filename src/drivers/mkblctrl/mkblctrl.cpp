@@ -42,6 +42,7 @@
  */
 
 #include <px4_config.h>
+#include <px4_tasks.h>
 #include <drivers/device/i2c.h>
 #include <systemlib/param/param.h>
 
@@ -59,7 +60,7 @@
 #include <unistd.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/i2c.h>
+#include <nuttx/i2c/i2c_master.h>
 
 #include <board_config.h>
 
@@ -504,7 +505,7 @@ MK::task_main()
 	/* loop until killed */
 	while (!_task_should_exit) {
 
-		param_get(_param_indicate_esc , &param_mkblctrl_test);
+		param_get(_param_indicate_esc, &param_mkblctrl_test);
 
 		if (param_mkblctrl_test > 0) {
 			_indicate_esc = true;

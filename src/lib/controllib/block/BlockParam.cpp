@@ -53,7 +53,7 @@ BlockParamBase::BlockParamBase(Block *parent, const char *name, bool parent_pref
 {
 	char fullname[blockNameLengthMax];
 
-	if (parent == NULL) {
+	if (parent == nullptr) {
 		strncpy(fullname, name, blockNameLengthMax);
 
 	} else {
@@ -62,12 +62,16 @@ BlockParamBase::BlockParamBase(Block *parent, const char *name, bool parent_pref
 
 		if (!strcmp(name, "")) {
 			strncpy(fullname, parentName, blockNameLengthMax);
+			// ensure string is terminated
+			fullname[sizeof(fullname) - 1] = '\0';
 
 		} else if (parent_prefix) {
 			snprintf(fullname, blockNameLengthMax, "%s_%s", parentName, name);
 
 		} else {
 			strncpy(fullname, name, blockNameLengthMax);
+			// ensure string is terminated
+			fullname[sizeof(fullname) - 1] = '\0';
 		}
 
 		parent->getParams().add(this);
