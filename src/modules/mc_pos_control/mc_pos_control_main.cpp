@@ -2117,7 +2117,13 @@ MulticopterPositionControl::generate_attitude_setpoint(float dt)
 	/* control roll and pitch directly if no aiding velocity controller is active */
 	if (!_control_mode.flag_control_velocity_enabled) {
 		_att_sp.roll_body = _manual.y * _params.man_roll_max;
-		_att_sp.pitch_body = -_manual.x * _params.man_pitch_max;
+
+		/* Enable static pitch control when AUX1 is enabled (above 0) by Andreas */
+		if (_manual.aux1 < 0) {
+			_att_sp.pitch_body = -_manual.x * _params.man_pitch_max;
+		} else {
+			_att_sp.pitch_body = 0.174; // 10 degree
+		}
 
 		/* only if optimal recovery is not used, modify roll/pitch */
 		if (_params.opt_recover <= 0) {
@@ -2256,6 +2262,11 @@ MulticopterPositionControl::task_main()
 		if (_vehicle_status.is_vtol && !_vehicle_status.is_rotary_wing) {
 			_reset_yaw_sp = true;
 			_reset_alt_sp = true;
+		}
+
+		/* reset yaw setpoint while AUX2 is high Added by Andreas */
+		if (_manual.aux2 > 0) {
+			_reset_yaw_sp = true;
 		}
 
 		//Update previous arming state
