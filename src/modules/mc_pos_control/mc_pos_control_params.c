@@ -39,6 +39,24 @@
  */
 
 /**
+ * Length of the tether
+ * *
+ * @group Multicopter Position Control
+ */
+
+PARAM_DEFINE_FLOAT(MPC_TETHER_LEN, 100.0f);
+
+/**
+ * Coordinates of the position of B, the tether point
+ * *
+ * @group Multicopter Position Control
+ */
+
+PARAM_DEFINE_FLOAT(MPC_X_POS_B, 0.0f);
+PARAM_DEFINE_FLOAT(MPC_Y_POS_B, 0.0f);
+PARAM_DEFINE_FLOAT(MPC_Z_POS_B, 0.0f);
+
+/**
  * Minimum thrust in auto thrust control
  *
  * It's recommended to set it > 0 to avoid free fall with zero thrust.

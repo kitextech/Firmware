@@ -118,7 +118,7 @@ public:
 	 * @return		OK on success.
 	 */
 	int		start();
-
+    
 	bool		cross_sphere_line(const math::Vector<3> &sphere_c, const float sphere_r,
 					  const math::Vector<3> &line_a, const math::Vector<3> &line_b, math::Vector<3> &res);
 
@@ -166,6 +166,10 @@ private:
 	control::BlockDerivative _vel_z_deriv;
 
 	struct {
+        param_t tether_len;
+        param_t x_pos_b;
+        param_t y_pos_b;
+        param_t z_pos_b;
 		param_t thr_min;
 		param_t thr_max;
 		param_t thr_hover;
@@ -204,10 +208,11 @@ private:
 		param_t opt_recover;
 		param_t xy_vel_man_expo;
 
-	}		_params_handles;		/**< handles for interesting parameters */
+    }		_params_handles;		/**< handles for interesting parameters */
 
 	struct {
-		float thr_min;
+        float tether_len;
+        float thr_min;
 		float thr_max;
 		float thr_hover;
 		float alt_ctl_dz;
@@ -234,6 +239,7 @@ private:
 
 		int opt_recover;
 
+        math::Vector<3> pos_b;
 		math::Vector<3> pos_p;
 		math::Vector<3> vel_p;
 		math::Vector<3> vel_i;
@@ -254,6 +260,8 @@ private:
 	bool _mode_auto;
 	bool _pos_hold_engaged;
 	bool _alt_hold_engaged;
+    
+    bool _run_hover_control; // If set, velocity will be calculated along the surface of a sphere at b.
 	bool _run_pos_control;
 	bool _run_alt_control;
 
@@ -437,7 +445,8 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_mode_auto(false),
 	_pos_hold_engaged(false),
 	_alt_hold_engaged(false),
-	_run_pos_control(true),
+    _run_hover_control(true), // Is this initialization?
+    _run_pos_control(true),
 	_run_alt_control(true),
 	_yaw(0.0f),
 	_in_landing(false),
@@ -457,6 +466,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 
 	memset(&_ref_pos, 0, sizeof(_ref_pos));
 
+    _params.pos_b.zero();
 	_params.pos_p.zero();
 	_params.vel_p.zero();
 	_params.vel_i.zero();
@@ -480,6 +490,12 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_R_setpoint.identity();
 
 	_thrust_int.zero();
+
+    _params_handles.x_pos_b		= param_find("MPC_X_POS_B");
+    _params_handles.y_pos_b		= param_find("MPC_Y_POS_B");
+    _params_handles.z_pos_b		= param_find("MPC_Y_POS_B");
+    
+    _params_handles.tether_len	= param_find("MPC_TETHER_LEN");
 
 	_params_handles.thr_min		= param_find("MPC_THR_MIN");
 	_params_handles.thr_max		= param_find("MPC_THR_MAX");
@@ -587,6 +603,13 @@ MulticopterPositionControl::parameters_update(bool force)
 
 		float v;
 		uint32_t v_i;
+        param_get(_params_handles.x_pos_b, &v);
+        _params.pos_b(0) = v;
+        param_get(_params_handles.y_pos_b, &v);
+        _params.pos_b(1) = v;
+        param_get(_params_handles.z_pos_b, &v);
+        _params.pos_b(2) = v;
+
 		param_get(_params_handles.xy_p, &v);
 		_params.pos_p(0) = v;
 		_params.pos_p(1) = v;
@@ -1320,7 +1343,7 @@ MulticopterPositionControl::vel_sp_slewrate(float dt)
 }
 
 bool
-MulticopterPositionControl::cross_sphere_line(const math::Vector<3> &sphere_c, const float sphere_r,
+MulticopterPositionControl::hover(const math::Vector<3> &sphere_c, const float sphere_r,
 		const math::Vector<3> &line_a, const math::Vector<3> &line_b, math::Vector<3> &res)
 {
 	/* project center of sphere on line */
@@ -1633,23 +1656,37 @@ MulticopterPositionControl::do_control(float dt)
 	} else {
 		control_non_manual(dt);
 	}
-
 }
 
 void
 MulticopterPositionControl::control_position(float dt)
 {
 	/* run position & altitude controllers, if enabled (otherwise use already computed velocity setpoints) */
-
-	if (_run_pos_control) {
-		_vel_sp(0) = (_pos_sp(0) - _pos(0)) * _params.pos_p(0);
-		_vel_sp(1) = (_pos_sp(1) - _pos(1)) * _params.pos_p(1);
-	}
-
-	if (_run_alt_control) {
-		_vel_sp(2) = (_pos_sp(2) - _pos(2)) * _params.pos_p(2);
-	}
-
+    
+    if (_run_hover_control) { // We are hovering, at the surface of a sphere
+        
+        math::Vector<3> rp = _pos - _params.pos_b;
+        math::Vector<3> rt = _pos_sp - _params.pos_b;
+        
+        float vectorLength = (_pos - _pos_sp).length();
+        math::Vector<3> s = ((rp % rt) % rp)*(vectorLength/pow(_params.tether_len, 3));
+        
+        _vel_sp(0) = s(0) * _params.pos_p(0);
+        _vel_sp(1) = s(1) * _params.pos_p(1);
+        _vel_sp(2) = s(2) * _params.pos_p(2);
+        
+//        _val_sp = s.emult(_params.pos_p); // Won't this also work?
+    }
+    else {
+        if (_run_pos_control) {
+            _vel_sp(0) = (_pos_sp(0) - _pos(0)) * _params.pos_p(0);
+            _vel_sp(1) = (_pos_sp(1) - _pos(1)) * _params.pos_p(1);
+        }
+        
+        if (_run_alt_control) {
+            _vel_sp(2) = (_pos_sp(2) - _pos(2)) * _params.pos_p(2);
+        }
+    }
 
 	/* make sure velocity setpoint is saturated in xy*/
 	float vel_norm_xy = sqrtf(_vel_sp(0) * _vel_sp(0) +
