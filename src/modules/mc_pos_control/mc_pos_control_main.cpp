@@ -1680,7 +1680,7 @@ MulticopterPositionControl::control_position(float dt)
         math::Vector<3> rt = _pos_sp - _params.pos_b;
 
         float vectorLength = (_pos - _pos_sp).length();
-        math::Vector<3> s = ((rp % rt) % rp)*(vectorLength/pow(_params.tether_len, 3));
+        math::Vector<3> s = ((rp % rt) % rp)*( (double) vectorLength/ pow(_params.tether_len, 3));
 
         _vel_sp(0) = s(0) * _params.pos_p(0);
         _vel_sp(1) = s(1) * _params.pos_p(1);
@@ -1798,9 +1798,11 @@ MulticopterPositionControl::control_position(float dt)
 			thrust_sp = math::Vector<3>(_pos_sp_triplet.current.a_x, _pos_sp_triplet.current.a_y, _pos_sp_triplet.current.a_z);
 
 		} else if (_params.tet_pos_ctl) { // We are hovering, at the surface of a sphere){
+			math::Vector<3> rp = _pos - _params.pos_b;
+
 			thrust_sp = vel_err.emult(_params.vel_p) + _vel_err_d.emult(_params.vel_d)
 						+ _thrust_int - math::Vector<3>(0.0f, 0.0f, _params.thr_hover)
-						+ _params.thr_tether * _params.thr_hover * rp;
+						+ rp * _params.thr_tether * _params.thr_hover / _params.tether_len;
 		} else {
 			thrust_sp = vel_err.emult(_params.vel_p) + _vel_err_d.emult(_params.vel_d)
 				    + _thrust_int - math::Vector<3>(0.0f, 0.0f, _params.thr_hover);
