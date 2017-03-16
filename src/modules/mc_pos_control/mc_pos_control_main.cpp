@@ -493,7 +493,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 
     _params_handles.x_pos_b		= param_find("MPC_X_POS_B");
     _params_handles.y_pos_b		= param_find("MPC_Y_POS_B");
-    _params_handles.z_pos_b		= param_find("MPC_Y_POS_B");
+    _params_handles.z_pos_b		= param_find("MPC_Z_POS_B");
     
     _params_handles.tether_len	= param_find("MPC_TETHER_LEN");
 
@@ -545,6 +545,8 @@ MulticopterPositionControl::MulticopterPositionControl() :
 
 	/* fetch initial parameter values */
 	parameters_update(true);
+    
+    printf("INIT bx: %.2f, by: %.2f, bz: %.2f\n", (double) _params.pos_b(0), (double) _params.pos_b(1), (double) _params.pos_b(2));
 }
 
 MulticopterPositionControl::~MulticopterPositionControl()
@@ -952,6 +954,9 @@ MulticopterPositionControl::limit_pos_sp_offset()
 void
 MulticopterPositionControl::control_manual(float dt)
 {
+    printf("bx: %.2f, by: %.2f, bz: %.2f\n", (double) _params.pos_b(0), (double) _params.pos_b(1), (double) _params.pos_b(2));
+    printf("px: %.2f, py: %.2f, pz: %.2f\n", (double) _pos(0), (double) _pos(1), (double) _pos(2));
+
 	/* Entering manual control from non-manual control mode, reset alt/pos setpoints */
 	if (_mode_auto) {
 		_mode_auto = false;
@@ -1343,7 +1348,7 @@ MulticopterPositionControl::vel_sp_slewrate(float dt)
 }
 
 bool
-MulticopterPositionControl::hover(const math::Vector<3> &sphere_c, const float sphere_r,
+MulticopterPositionControl::cross_sphere_line(const math::Vector<3> &sphere_c, const float sphere_r,
 		const math::Vector<3> &line_a, const math::Vector<3> &line_b, math::Vector<3> &res)
 {
 	/* project center of sphere on line */
@@ -1669,11 +1674,13 @@ MulticopterPositionControl::control_position(float dt)
         math::Vector<3> rt = _pos_sp - _params.pos_b;
         
         float vectorLength = (_pos - _pos_sp).length();
-        math::Vector<3> s = ((rp % rt) % rp)*(vectorLength/pow(_params.tether_len, 3));
+        math::Vector<3> s = ((rp % rt) % rp)*(vectorLength/(_params.tether_len*_params.tether_len*_params.tether_len));
         
         _vel_sp(0) = s(0) * _params.pos_p(0);
         _vel_sp(1) = s(1) * _params.pos_p(1);
         _vel_sp(2) = s(2) * _params.pos_p(2);
+        
+        printf("sx: %.2f, sy: %.2f, sz: %.2f\n");
         
 //        _val_sp = s.emult(_params.pos_p); // Won't this also work?
     }
@@ -2274,6 +2281,8 @@ MulticopterPositionControl::task_main()
 		}
 
 		poll_subscriptions();
+
+        printf("LOOP bx: %.2f, by: %.2f, bz: %.2f\n", (double) _params.pos_b(0), (double) _params.pos_b(1), (double) _params.pos_b(2));
 
 		parameters_update(false);
 
