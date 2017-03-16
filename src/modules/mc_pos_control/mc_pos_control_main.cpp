@@ -118,7 +118,7 @@ public:
 	 * @return		OK on success.
 	 */
 	int		start();
-    
+
 	bool		cross_sphere_line(const math::Vector<3> &sphere_c, const float sphere_r,
 					  const math::Vector<3> &line_a, const math::Vector<3> &line_b, math::Vector<3> &res);
 
@@ -166,10 +166,13 @@ private:
 	control::BlockDerivative _vel_z_deriv;
 
 	struct {
-        param_t tether_len;
-        param_t x_pos_b;
-        param_t y_pos_b;
-        param_t z_pos_b;
+    param_t tether_len;
+    param_t x_pos_b;
+    param_t y_pos_b;
+    param_t z_pos_b;
+		param_t thr_tether;
+		param_t pitch_hvr;
+		param_t tet_pos_ctl;
 		param_t thr_min;
 		param_t thr_max;
 		param_t thr_hover;
@@ -211,8 +214,11 @@ private:
     }		_params_handles;		/**< handles for interesting parameters */
 
 	struct {
-        float tether_len;
-        float thr_min;
+    float tether_len;
+    float thr_min;
+		float thr_tether;
+		float pitch_hvr;
+		uint32_t tet_pos_ctl;
 		float thr_max;
 		float thr_hover;
 		float alt_ctl_dz;
@@ -239,7 +245,7 @@ private:
 
 		int opt_recover;
 
-        math::Vector<3> pos_b;
+    math::Vector<3> pos_b;
 		math::Vector<3> pos_p;
 		math::Vector<3> vel_p;
 		math::Vector<3> vel_i;
@@ -260,8 +266,6 @@ private:
 	bool _mode_auto;
 	bool _pos_hold_engaged;
 	bool _alt_hold_engaged;
-    
-    bool _run_hover_control; // If set, velocity will be calculated along the surface of a sphere at b.
 	bool _run_pos_control;
 	bool _run_alt_control;
 
@@ -445,8 +449,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_mode_auto(false),
 	_pos_hold_engaged(false),
 	_alt_hold_engaged(false),
-    _run_hover_control(true), // Is this initialization?
-    _run_pos_control(true),
+  _run_pos_control(true),
 	_run_alt_control(true),
 	_yaw(0.0f),
 	_in_landing(false),
@@ -466,7 +469,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 
 	memset(&_ref_pos, 0, sizeof(_ref_pos));
 
-    _params.pos_b.zero();
+	_params.pos_b.zero();
 	_params.pos_p.zero();
 	_params.vel_p.zero();
 	_params.vel_i.zero();
@@ -593,6 +596,10 @@ MulticopterPositionControl::parameters_update(bool force)
 		param_get(_params_handles.thr_min, &_params.thr_min);
 		param_get(_params_handles.thr_max, &_params.thr_max);
 		param_get(_params_handles.thr_hover, &_params.thr_hover);
+		param_get(_params_handles.thr_tether, &_params.thr_tether);
+		param_get(_params_handles.pitch_hvr, &_params.pitch_hvr);
+		param_get(_params_handles.tet_pos_ctl, &_params.tet_pos_ctl);
+
 		_params.thr_hover = math::constrain(_params.thr_hover, _params.thr_min, _params.thr_max);
 		param_get(_params_handles.alt_ctl_dz, &_params.alt_ctl_dz);
 		param_get(_params_handles.alt_ctl_dy, &_params.alt_ctl_dy);
@@ -605,12 +612,12 @@ MulticopterPositionControl::parameters_update(bool force)
 
 		float v;
 		uint32_t v_i;
-        param_get(_params_handles.x_pos_b, &v);
-        _params.pos_b(0) = v;
-        param_get(_params_handles.y_pos_b, &v);
-        _params.pos_b(1) = v;
-        param_get(_params_handles.z_pos_b, &v);
-        _params.pos_b(2) = v;
+    param_get(_params_handles.x_pos_b, &v);
+    _params.pos_b(0) = v;
+    param_get(_params_handles.y_pos_b, &v);
+    _params.pos_b(1) = v;
+    param_get(_params_handles.z_pos_b, &v);
+    _params.pos_b(2) = v;
 
 		param_get(_params_handles.xy_p, &v);
 		_params.pos_p(0) = v;
@@ -1667,12 +1674,12 @@ void
 MulticopterPositionControl::control_position(float dt)
 {
 	/* run position & altitude controllers, if enabled (otherwise use already computed velocity setpoints) */
-    
-    if (_run_hover_control) { // We are hovering, at the surface of a sphere
-        
+
+    if (_params.tet_pos_ctl) { // We are hovering, at the surface of a sphere
+
         math::Vector<3> rp = _pos - _params.pos_b;
         math::Vector<3> rt = _pos_sp - _params.pos_b;
-        
+
         float vectorLength = (_pos - _pos_sp).length();
         math::Vector<3> s = ((rp % rt) % rp)*(vectorLength/(_params.tether_len*_params.tether_len*_params.tether_len));
         
@@ -1689,7 +1696,7 @@ MulticopterPositionControl::control_position(float dt)
             _vel_sp(0) = (_pos_sp(0) - _pos(0)) * _params.pos_p(0);
             _vel_sp(1) = (_pos_sp(1) - _pos(1)) * _params.pos_p(1);
         }
-        
+
         if (_run_alt_control) {
             _vel_sp(2) = (_pos_sp(2) - _pos(2)) * _params.pos_p(2);
         }
@@ -1793,6 +1800,12 @@ MulticopterPositionControl::control_position(float dt)
 		if (_control_mode.flag_control_acceleration_enabled && _pos_sp_triplet.current.acceleration_valid) {
 			thrust_sp = math::Vector<3>(_pos_sp_triplet.current.a_x, _pos_sp_triplet.current.a_y, _pos_sp_triplet.current.a_z);
 
+		} else if (_params.tet_pos_ctl) { // We are hovering, at the surface of a sphere){
+			math::Vector<3> rp = _pos - _params.pos_b;
+
+			thrust_sp = vel_err.emult(_params.vel_p) + _vel_err_d.emult(_params.vel_d)
+						+ _thrust_int - math::Vector<3>(0.0f, 0.0f, _params.thr_hover)
+						+ rp * _params.thr_tether * _params.thr_hover / _params.tether_len;
 		} else {
 			thrust_sp = vel_err.emult(_params.vel_p) + _vel_err_d.emult(_params.vel_d)
 				    + _thrust_int - math::Vector<3>(0.0f, 0.0f, _params.thr_hover);
@@ -2162,11 +2175,11 @@ MulticopterPositionControl::generate_attitude_setpoint(float dt)
 	if (!_control_mode.flag_control_velocity_enabled) {
 		_att_sp.roll_body = _manual.y * _params.man_roll_max;
 
-		/* Enable static pitch control when AUX1 is enabled (above 0) by Andreas */
+		/* Enable static pitch control when AUX1 is enabled (above 0) by KiteX */
 		if (_manual.aux1 < 0) {
 			_att_sp.pitch_body = -_manual.x * _params.man_pitch_max;
 		} else {
-			_att_sp.pitch_body = 0.174; // 10 degree
+			_att_sp.pitch_body = _params.pitch_hvr;
 		}
 
 		/* only if optimal recovery is not used, modify roll/pitch */
@@ -2310,8 +2323,9 @@ MulticopterPositionControl::task_main()
 			_reset_alt_sp = true;
 		}
 
-		/* reset yaw setpoint while AUX2 is high Added by Andreas */
-		if (_manual.aux2 > 0) {
+		/* reset yaw setpoint while AUX1 is high Added by Andreas
+		for manual tetheted flight */
+		if (_manual.aux1 > 0) {
 			_reset_yaw_sp = true;
 		}
 
