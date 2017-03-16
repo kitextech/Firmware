@@ -218,7 +218,7 @@ private:
     float thr_min;
 		float thr_tether;
 		float pitch_hvr;
-		uint32_t tet_pos_ctl;
+		float tet_pos_ctl;
 		float thr_max;
 		float thr_hover;
 		float alt_ctl_dz;
@@ -1674,7 +1674,7 @@ MulticopterPositionControl::control_position(float dt)
 {
 	/* run position & altitude controllers, if enabled (otherwise use already computed velocity setpoints) */
 
-    if (_params.tet_pos_ctl) { // We are hovering, at the surface of a sphere
+    if (_params.tet_pos_ctl > 0.5f) { // We are hovering, at the surface of a sphere
 
         math::Vector<3> rp = _pos - _params.pos_b;
         math::Vector<3> rt = _pos_sp - _params.pos_b;
@@ -1797,7 +1797,7 @@ MulticopterPositionControl::control_position(float dt)
 		if (_control_mode.flag_control_acceleration_enabled && _pos_sp_triplet.current.acceleration_valid) {
 			thrust_sp = math::Vector<3>(_pos_sp_triplet.current.a_x, _pos_sp_triplet.current.a_y, _pos_sp_triplet.current.a_z);
 
-		} else if (_params.tet_pos_ctl) { // We are hovering, at the surface of a sphere){
+		} else if (_params.tet_pos_ctl > 0.5f) { // We are hovering, at the surface of a sphere){
 			math::Vector<3> rp = _pos - _params.pos_b;
 
 			thrust_sp = vel_err.emult(_params.vel_p) + _vel_err_d.emult(_params.vel_d)
