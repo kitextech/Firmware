@@ -1031,7 +1031,7 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 	/* angular rates error */
 	math::Vector<3> rates_err = _rates_sp - rates;
 
-	/* Andreas don't fight yaw rotation*/
+	/* Andreas don't fight yaw rotation, Perhaps not necessary*/
 	if (_manual_control_sp.aux1 > 0) {
 		rates_err(3) = 0;
 	}

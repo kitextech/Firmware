@@ -1680,7 +1680,8 @@ MulticopterPositionControl::control_position(float dt)
         math::Vector<3> rt = _pos_sp - _params.pos_b;
 
         float vectorLength = (_pos - _pos_sp).length();
-        math::Vector<3> s = ((rp % rt) % rp)*( (double) vectorLength/ pow(_params.tether_len, 3));
+				math::Vector<3> velDir = (rp % rt) % rp;
+        math::Vector<3> s = velDir * vectorLength / velDir.length();
 
         _vel_sp(0) = s(0) * _params.pos_p(0);
         _vel_sp(1) = s(1) * _params.pos_p(1);
@@ -1801,8 +1802,8 @@ MulticopterPositionControl::control_position(float dt)
 			math::Vector<3> rp = _pos - _params.pos_b;
 
 			thrust_sp = vel_err.emult(_params.vel_p) + _vel_err_d.emult(_params.vel_d)
-						+ _thrust_int - math::Vector<3>(0.0f, 0.0f, _params.thr_hover)
-						+ rp * _params.thr_tether * _params.thr_hover / _params.tether_len;
+						+ _thrust_int + math::Vector<3>(0.0f, 0.0f, -_params.thr_hover)
+						+ rp / rp.length() * _params.thr_tether * _params.thr_hover ;
 		} else {
 			thrust_sp = vel_err.emult(_params.vel_p) + _vel_err_d.emult(_params.vel_d)
 				    + _thrust_int - math::Vector<3>(0.0f, 0.0f, _params.thr_hover);
@@ -2320,7 +2321,7 @@ MulticopterPositionControl::task_main()
 
 		/* reset yaw setpoint while AUX1 is high Added by Andreas
 		for manual tetheted flight */
-		if (_manual.aux1 > 0) {
+		if (_manual.aux1 > 0 || _params.tet_pos_ctl > 0.5f) {
 			_reset_yaw_sp = true;
 		}
 
