@@ -212,6 +212,7 @@ private:
 		param_t fw_min_alt;
 		param_t front_trans_time_openloop;
 		param_t front_trans_time_min;
+		param_t vtol_front_trans_dur;
 	} _params_handles;
 
 	/* for multicopters it is usual to have a non-zero idle speed of the engines
@@ -250,6 +251,9 @@ private:
 	void 		fill_fw_att_rates_sp();
 	void		handle_command();
 	void 		publish_att_sp();
+	void 		publish_rates_sp();
+	void    do_poll();
+
 };
 
 #endif
