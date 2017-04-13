@@ -32,7 +32,7 @@
  ****************************************************************************/
 
 /**
-* @file tailsitter.h
+* @file kite.h
 *
 * @author Andreas Okholm   <bapstroman@gmail.com
 *

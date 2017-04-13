@@ -94,6 +94,7 @@
 #include <uORB/topics/vtol_vehicle_status.h>
 #include <uORB/uORB.h>
 
+#include "kite.h"
 #include "tiltrotor.h"
 #include "tailsitter.h"
 #include "standard.h"
