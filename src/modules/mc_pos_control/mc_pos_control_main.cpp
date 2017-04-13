@@ -91,7 +91,7 @@
 #define MIN_DIST		0.01f
 #define MANUAL_THROTTLE_MAX_MULTICOPTER	0.9f
 #define ONE_G	9.8066f
-
+#define _USE_MATH_DEFINES
 /**
  * Multicopter position control app start / stop handling function
  *
@@ -166,6 +166,9 @@ private:
 	control::BlockDerivative _vel_z_deriv;
 
 	struct {
+		param_t phiC;
+		param_t thetaC;
+		param_t turning_radius;
 		param_t tether_len;
 		param_t x_pos_b;
 		param_t y_pos_b;
@@ -214,6 +217,9 @@ private:
 	}		_params_handles;		/**< handles for interesting parameters */
 
 	struct {
+		float phiC;
+		float thetaC;
+		float turning_radius;
 		float tether_len;
 		float thr_min;
 		float thr_tether;
@@ -244,6 +250,10 @@ private:
 		uint32_t alt_mode;
 
 		int opt_recover;
+
+		math::Vector<3> pos_c;
+		math::Vector<3> e_pi_x;
+		math::Vector<3> e_pi_y;
 
 		math::Vector<3> pos_b;
 		math::Vector<3> pos_p;
@@ -279,6 +289,17 @@ private:
 
 	math::Vector<3> _thrust_int;
 
+	float _pi_path_x[60]; // KiteX: x-coords of path points
+	float _pi_path_y[60]; // KiteX: y-coords of path points
+	int _pi_path_i = 0; // KiteX: Path of kite in Pi plane
+
+	math::Vector<2> _dir_pi; // KiteX: Projected direction vector in Pi
+	math::Vector<2> _pos_pi; // KiteX: Projected position in Pi
+	math::Vector<2> _target_point_pi; // KiteX: Target point on path
+	float _arc_radius = 100000000.0f; // KiteX: Radius of path
+	float _arc_angle = 0.0f; // KiteX: Radius of path
+	float _arc_roll_rate = 0.0f; // KiteX: Yaw rate to reach path
+
 	math::Vector<3> _pos;
 	math::Vector<3> _pos_sp;
 	math::Vector<3> _vel;
@@ -306,6 +327,21 @@ private:
 	uint8_t _heading_reset_counter;
 
 	matrix::Dcmf _R_setpoint;
+
+	// KiteX
+	void update_pi(float phi, float theta);
+	void update_pi_path(float radius);
+	void update_pi_projection();
+	void update_pi_target_point(float search_radius);
+	void update_pi_arc();
+	void update_pi_roll_rate();
+
+	void control_looping(float dt);
+
+
+	// KiteX pure helpers
+	float signed_angle(const math::Vector<2> &left, const math::Vector<2> &right);
+	float square_distance_to_path(const int path_i);
 
 	/**
 	 * Update our local parameter cache.
@@ -469,7 +505,11 @@ _heading_reset_counter(0)
 
 	memset(&_ref_pos, 0, sizeof(_ref_pos));
 
+	_params.pos_c.zero();
 	_params.pos_b.zero();
+	_params.e_pi_x.zero();
+	_params.e_pi_y.zero();
+
 	_params.pos_p.zero();
 	_params.vel_p.zero();
 	_params.vel_i.zero();
@@ -479,6 +519,8 @@ _heading_reset_counter(0)
 	_params.vel_ff.zero();
 	_params.sp_offs_max.zero();
 
+	_dir_pi.zero();
+	_pos_pi.zero();
 	_pos.zero();
 	_pos_sp.zero();
 	_vel.zero();
@@ -493,6 +535,10 @@ _heading_reset_counter(0)
 	_R_setpoint.identity();
 
 	_thrust_int.zero();
+
+	_params_handles.phiC						= param_find("MPC_PHI_C");
+	_params_handles.thetaC				 	= param_find("MPC_THETA_C");
+	_params_handles.turning_radius	= param_find("MPC_LOOP_TURN_R");
 
 	_params_handles.x_pos_b		= param_find("MPC_X_POS_B");
 	_params_handles.y_pos_b		= param_find("MPC_Y_POS_B");
@@ -600,6 +646,9 @@ MulticopterPositionControl::parameters_update(bool force)
 		param_get(_params_handles.thr_min, &_params.thr_min);
 		param_get(_params_handles.thr_max, &_params.thr_max);
 		param_get(_params_handles.thr_hover, &_params.thr_hover);
+
+    /* KiteX: tethered flying, manual and offboard */
+		param_get(_params_handles.tether_len, &_params.tether_len);
 		param_get(_params_handles.thr_tether, &_params.thr_tether);
 		param_get(_params_handles.pitch_hvr, &_params.pitch_hvr);
 		param_get(_params_handles.tet_pos_ctl, &_params.tet_pos_ctl);
@@ -614,6 +663,11 @@ MulticopterPositionControl::parameters_update(bool force)
 		param_get(_params_handles.tilt_max_land, &_params.tilt_max_land);
 		_params.tilt_max_land = math::radians(_params.tilt_max_land);
 
+		/* KiteX: Controlling C for looping */
+		param_get(_params_handles.phiC, &_params.phiC);
+		param_get(_params_handles.thetaC, &_params.thetaC);
+		param_get(_params_handles.turning_radius, &_params.turning_radius);
+
 		float v;
 		uint32_t v_i;
 		param_get(_params_handles.x_pos_b, &v);
@@ -622,6 +676,17 @@ MulticopterPositionControl::parameters_update(bool force)
 		_params.pos_b(1) = v;
 		param_get(_params_handles.z_pos_b, &v);
 		_params.pos_b(2) = v;
+
+		/* KiteX calculate C - not really needed */
+//		float d	= calculate_d(_params.tether_len, _params.turning_radius);
+//		_params.pos_c = calculate_vector(_params.phiC, _params.thetaC, d) + _params.pos_b;
+
+//		_params.e_pi_x = calculate_e_pi_x(_params.phiC, _params.thetaC);
+//		_params.e_pi_y = calculate_e_pi_y(_params.phiC, _params.thetaC);
+
+		// KiteX: Update projection plane and path
+		update_pi(_params.phiC, _params.thetaC);
+		update_pi_path(_params.turning_radius);
 
 		param_get(_params_handles.xy_p, &v);
 		_params.pos_p(0) = v;
@@ -1113,7 +1178,9 @@ MulticopterPositionControl::control_non_manual(float dt)
 		/* offboard control */
 		control_offboard(dt);
 		_mode_auto = false;
-
+	}
+	else if (_control_mode.flag_control_kite_looping) {
+		control_looping(dt);
 	} else {
 		_hold_offboard_xy = false;
 		_hold_offboard_z = false;
@@ -1402,6 +1469,15 @@ MulticopterPositionControl::cross_sphere_line(const math::Vector<3> &sphere_c, c
 	}
 }
 
+// KiteX: This is run when in a loop
+void MulticopterPositionControl::control_looping(float dt)
+{
+	update_pi_projection();
+	update_pi_target_point(0.4*_params.turning_radius);
+	update_pi_arc();
+	update_pi_roll_rate();
+}
+
 void MulticopterPositionControl::control_auto(float dt)
 {
 	/* reset position setpoint on AUTO mode activation or if we are not in MC mode */
@@ -1685,7 +1761,7 @@ MulticopterPositionControl::control_position(float dt)
 		math::Vector<3> rt = _pos_sp - _params.pos_b;
 
 		float vectorLength = (_pos - _pos_sp).length();
-		math::Vector<3> s = ((rp % rt) % rp)*( (double) vectorLength/ pow(_params.tether_len, 3));
+		math::Vector<3> s = ((rp % rt) % rp)*((double) vectorLength/pow(_params.tether_len, 3));
 
 		_vel_sp(0) = s(0) * _params.pos_p(0);
 		_vel_sp(1) = s(1) * _params.pos_p(1);
@@ -1705,7 +1781,7 @@ MulticopterPositionControl::control_position(float dt)
 			_vel_sp(2) = (_pos_sp(2) - _pos(2)) * _params.pos_p(2);
 		}
 	}
-	
+
 	/* make sure velocity setpoint is saturated in xy*/
 	float vel_norm_xy = sqrtf(_vel_sp(0) * _vel_sp(0) +
 							  _vel_sp(1) * _vel_sp(1));
@@ -2299,8 +2375,6 @@ MulticopterPositionControl::task_main()
 
 		poll_subscriptions();
 
-		printf("LOOP bx: %.2f, by: %.2f, bz: %.2f\n", (double) _params.pos_b(0), (double) _params.pos_b(1), (double) _params.pos_b(2));
-
 		parameters_update(false);
 
 		hrt_abstime t = hrt_absolute_time();
@@ -2473,39 +2547,195 @@ int mc_pos_control_main(int argc, char *argv[])
 			warnx("alloc failed");
 			return 1;
 		}
-		
+
 		if (OK != pos_control::g_control->start()) {
 			delete pos_control::g_control;
 			pos_control::g_control = nullptr;
 			warnx("start failed");
 			return 1;
 		}
-		
+
 		return 0;
 	}
-	
+
 	if (!strcmp(argv[1], "stop")) {
 		if (pos_control::g_control == nullptr) {
 			warnx("not running");
 			return 1;
 		}
-		
+
 		delete pos_control::g_control;
 		pos_control::g_control = nullptr;
 		return 0;
 	}
-	
+
 	if (!strcmp(argv[1], "status")) {
 		if (pos_control::g_control) {
 			warnx("running");
 			return 0;
-			
+
 		} else {
 			warnx("not running");
 			return 1;
 		}
 	}
-	
+
 	warnx("unrecognized command");
 	return 1;
 }
+
+// KiteX functions
+
+/*
+	TODO:
+
+	-Bonus
+	Make unit sized path and multiply radius JIT
+	Make path an array of vectors
+	Make faster signed_angle with atan
+*/
+
+// Impure versions
+
+// KiteX: Run when the angles for C change
+void MulticopterPositionControl::update_pi(float phi, float theta)
+{
+	_params.e_pi_x(0) = sinf(phi);
+	_params.e_pi_x(1) = -cosf(phi);
+	_params.e_pi_x(2) = 0;
+
+	_params.e_pi_y(0) = -sinf(phi)*sinf(theta);
+	_params.e_pi_y(1) = -cosf(phi)*sinf(theta);
+	_params.e_pi_y(2) = -cosf(theta);
+}
+
+// KiteX: Run when the turning radius changes
+void MulticopterPositionControl::update_pi_path(float radius)
+{
+	for (int i = 0; i < 60; i++) {
+		float phi = i*2*M_PI/60;
+		_pi_path_x[i] = radius*cosf(phi);
+		_pi_path_y[i] = radius*sinf(phi);
+	}
+}
+
+// KiteX: Run when position changes
+void MulticopterPositionControl::update_pi_projection()
+{
+	math::Vector<3> relative_pos = _pos - _params.pos_b;
+	_pos_pi(0) = relative_pos*_params.e_pi_x;
+	_pos_pi(1) = relative_pos*_params.e_pi_y;
+
+	math::Vector<3> direction = _vel.normalized();
+	_dir_pi(0) = direction*_params.e_pi_x;
+	_dir_pi(1) = direction*_params.e_pi_y;
+}
+
+void MulticopterPositionControl::update_pi_target_point(float search_radius)
+{
+	int index = _pi_path_i;
+	float radius = search_radius;
+
+	while ((double) square_distance_to_path(index) < pow(radius, 2)) {
+		index = index + 1 % 60;
+
+		if (index == _pi_path_i) {
+			radius = 0.75f*radius; // Decrease the search radius until it works
+		}
+	}
+
+	_pi_path_i = index;
+	_target_point_pi(0) = _pi_path_x[_pi_path_i];
+	_target_point_pi(1) = _pi_path_y[_pi_path_i];
+}
+
+void MulticopterPositionControl::update_pi_arc()
+{
+	math::Vector<2> delta_pos = _target_point_pi - _pos_pi;
+	_arc_angle = signed_angle(_dir_pi, delta_pos);
+	float factor = 1/sqrtf(2*(1 - cosf(2*_arc_angle)));
+	_arc_radius = factor*delta_pos.length();
+}
+
+void MulticopterPositionControl::update_pi_roll_rate()
+{
+	_arc_roll_rate = copysignf(1.0f, _arc_angle)*_vel.length()/_arc_radius;
+}
+
+// KiteX: Pure helper functions
+
+float MulticopterPositionControl::signed_angle(const math::Vector<2> &left, const math::Vector<2> &right)
+{
+	const math::Vector<2> l = left.normalized();
+	const math::Vector<2> r = right.normalized();
+
+	float s_angle = asin(l % r);
+
+	if (acos(l*r) > M_PI_2) {
+			if (s_angle > 0) {
+					return ((float) M_PI) - s_angle;
+			}
+			else {
+					return -((float) M_PI) - s_angle;
+			}
+	}
+	else {
+			return s_angle;
+	}
+}
+
+float MulticopterPositionControl::square_distance_to_path(const int path_i)
+{
+	return pow(_pos_pi(0) - _pi_path_x[path_i], 2) + pow(_pos_pi(1) - _pi_path_y[path_i], 2);
+}
+
+/*
+// Pure versions, not used currently
+const math::Vector<3> calculate_e_pi_x(float phi_n, float theta_n)
+{
+	math::Vector<3> result;
+	result(0) = sinf(phi);
+	result(1) = -cosf(phi);
+	result(2) = 0;
+
+	return result;
+}
+
+const math::Vector<3> calculate_e_pi_y(float phi_n, float theta_n)
+{
+	float xyFactor = sinf(theta);
+
+	math::Vector<3> result;
+	result(0) = -sinf(phi)*sinf(theta);
+	result(1) = -cosf(phi)*sinf(theta);
+	result(2) = -cosf(theta_n);
+
+	return result;
+}
+
+const math::Vector<2> project(const math::Vector<3> &vector, const math::Vector<3> &e_x, const math::Vector<3> &e_y)
+{
+	math::Vector<2> result;
+	result(0) = vector*e_x;
+	result(1) = vector*e_y;
+
+	return result;
+}
+
+float calculate_d(const float tetherLength, const float turningRadius)
+{
+	pow(tetherLength, 2) - pow(turningRadius, 2);
+}
+
+const math::Vector<3> calculate_vector(const float phi, const float theta, const float d)
+{
+	float xyFactor = d*cosf(theta);
+	math::Vector<3> result;
+
+	result(0) = xyFactor*cosf(phi);
+	result(1) = xyFactor*sinf(phi);
+	result(2) = -d*sinf(theta);
+
+	return result;
+}
+*/
