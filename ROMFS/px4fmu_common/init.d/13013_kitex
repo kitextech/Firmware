@@ -1,8 +1,8 @@
 #!nsh
 #
-# @name SuperQ Kite
+# @name VTOL SuperQ Kite
 #
-# @type Quadrotor x
+# @type VTOL Quad Tailsitter
 #
 # @output MAIN5 RUDDER
 # @output MAIN6 ELEVATOR

@@ -55,6 +55,7 @@ Kite::Kite(VtolAttitudeControl *attc) :
 	_params_handles_kite.airspeed_trans = param_find("VT_ARSP_TRANS");
 	_params_handles_kite.trans_forward_roll = param_find("VT_T_F_ROLL");
 	_params_handles_kite.trans_forward_thrust = param_find("VT_T_F_THRUST");
+	_params_handles_kite.trans_forward_duration_max = param_find("VT_T_F_DUR_MAX"); // not currently in use
 	_params_handles_kite.trans_backwards_pitch = param_find("VT_T_B_PITCH");
 	_params_handles_kite.trans_backwards_roll = param_find("VT_T_B_ROLL");
 	_params_handles_kite.trans_backwards_thrust = param_find("VT_T_B_THRUST");
@@ -78,6 +79,9 @@ Kite::parameters_update()
 
 	param_get(_params_handles_kite.trans_forward_thrust, &f);
 	_params_kite.trans_forward_thrust = f;
+
+	param_get(_params_handles_kite.trans_forward_duration_max, &f);
+	_params_kite.trans_forward_duration_max = f;
 
 	param_get(_params_handles_kite.trans_backwards_pitch, &f);
 	_params_kite.trans_backwards_pitch = f;
@@ -109,6 +113,7 @@ void Kite::update_vtol_state()
 			// initialise a front transition
 			_vtol_schedule.flight_mode 	= TRANSITION_FRONT;
 			_vtol_schedule.transition_start = hrt_absolute_time();
+			set_transition_starting_values();
 			break;
 
 		case FW_MODE:
@@ -119,6 +124,8 @@ void Kite::update_vtol_state()
 			if ((_airspeed->indicated_airspeed_m_s >= _params_kite.airspeed_trans) || can_transition_on_ground()) {
 				_vtol_schedule.flight_mode = FW_MODE;
 			}
+
+			// if ( (float)hrt_elapsed_time(&_vtol_schedule.transition_start) )
 			break;
 
 		case TRANSITION_BACK:
@@ -134,6 +141,7 @@ void Kite::update_vtol_state()
 		case FW_MODE:
 			_vtol_schedule.flight_mode 	= TRANSITION_BACK;
 			_vtol_schedule.transition_start = hrt_absolute_time();
+			set_transition_starting_values();
 			break;
 
 		case TRANSITION_FRONT:
@@ -144,7 +152,7 @@ void Kite::update_vtol_state()
 		case TRANSITION_BACK:
 
 			// check if we have reached the roll angle to switch to MC mode
-			if (_airspeed->indicated_airspeed_m_s >= 8) { // TODO speed
+			if (_airspeed->indicated_airspeed_m_s <= 8) { // TODO speed
 				_vtol_schedule.flight_mode = MC_MODE;
 			}
 
@@ -191,7 +199,7 @@ void Kite::update_transition_state()
 			_v_att_sp->thrust = _params_kite.trans_forward_thrust;
 		}
 
-		_v_att_sp->pitch_body = _pitch_transition_start;
+		_v_att_sp->pitch_body = _pitch_transition_start; // TODO go towards 0, don't relax rules
 
 	} else if (_vtol_schedule.flight_mode == TRANSITION_BACK) {
 
@@ -246,10 +254,14 @@ void Kite::waiting_on_tecs()
 
 void Kite::set_transition_starting_values()
 {
-	_yaw_transition_start = _v_att_sp->yaw_body;
-	_thrust_transition_start = _v_att_sp->thrust;
-	_pitch_transition_start = _v_att_sp->pitch_body;
-	_roll_transition_start = _v_att_sp->roll_body;
+
+	matrix::Eulerf euler = matrix::Quatf(_v_att->q);
+	// phi, theta, psi
+
+	_yaw_transition_start = euler.phi();
+	_thrust_transition_start = _mc_virtual_att_sp->thrust;
+	_pitch_transition_start = _mc_virtual_att_sp->pitch_body;
+	_roll_transition_start = _mc_virtual_att_sp->roll_body;
 }
 
 void Kite::update_mc_state()
@@ -289,7 +301,7 @@ void Kite::fill_actuator_outputs()
 		_actuators_mc_in->control[actuator_controls_s::INDEX_PITCH] * _mc_pitch_weight;
 	// yaw
 	_actuators_out_0->control[actuator_controls_s::INDEX_YAW] =
-		_actuators_mc_in->control[actuator_controls_s::INDEX_YAW] * _mc_yaw_weight;
+		_actuators_mc_in->control[actuator_controls_s::INDEX_YAW] * _mc_yaw_weight * 0.1f;
 	// throttle
 	_actuators_out_0->control[actuator_controls_s::INDEX_THROTTLE] =
 		_actuators_mc_in->control[actuator_controls_s::INDEX_THROTTLE];

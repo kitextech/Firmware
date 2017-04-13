@@ -41,24 +41,7 @@
 #include <systemlib/param/param.h>
 
 /**
- * Fixed wing minimum airspeed
- *
- * The minimum airspeed required for a succesful transition to FW flight
- *
- * @unit s
- * @min 10.0
- * @max 20.0
- * @increment 0.1
- * @decimal 2
- * @group VTOL Attitude Control
-*/
-PARAM_DEFINE_FLOAT(VT_FW_MIN_SPEED, 15.0f);
-
-
-/**
  * Transition forward to FW mode roll target
- *
- *
  *
  * @unit rad
  * @min -1.6
@@ -79,12 +62,24 @@ PARAM_DEFINE_FLOAT(VT_T_F_ROLL, -1.57f);
  * @decimal 3
  * @group VTOL Attitude Control
 */
-PARAM_DEFINE_FLOAT(VT_T_F_THRUST, 0.9f);
+PARAM_DEFINE_FLOAT(VT_T_F_THRUST, 0.5f);
+
+/**
+ * Max duration of a front transition
+ *
+ * Maximim transition time for a front transition.
+ *
+ * @unit s
+ * @min 0.00
+ * @max 10.00
+ * @increment 0.1
+ * @decimal 3
+ * @group VTOL Attitude Control
+ */
+PARAM_DEFINE_FLOAT(VT_T_F_DUR_MAX, 5.0f);
 
 /**
  * Transition backwards to MC mode pitch target
- *
- *
  *
  * @unit rad
  * @min -0.8
@@ -93,12 +88,10 @@ PARAM_DEFINE_FLOAT(VT_T_F_THRUST, 0.9f);
  * @decimal 3
  * @group VTOL Attitude Control
 */
-PARAM_DEFINE_FLOAT(VT_T_B_PITCH, 0.5f);
+PARAM_DEFINE_FLOAT(VT_T_B_PITCH, 0.0f);
 
 /**
  * Transition backwards to MC mode roll target
- *
- *
  *
  * @unit rad
  * @min -0.8

@@ -2321,7 +2321,7 @@ MulticopterPositionControl::task_main()
 
 		/* reset yaw setpoint while AUX1 is high Added by Andreas
 		for manual tetheted flight */
-		if (_manual.aux1 > 0 || _params.tet_pos_ctl > 0.5f) {
+		if (_params.tet_pos_ctl > 0.5f) {
 			_reset_yaw_sp = true;
 		}
 

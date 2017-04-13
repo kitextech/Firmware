@@ -67,6 +67,7 @@ private:
 		float airspeed_trans;
 		float trans_forward_roll;
 		float trans_forward_thrust;
+		float trans_forward_duration_max;
 		float trans_backwards_pitch;
 		float trans_backwards_roll;
 		float trans_backwards_thrust;
@@ -77,6 +78,7 @@ private:
 		param_t airspeed_trans;
 		param_t trans_forward_roll;
 		param_t trans_forward_thrust;
+		param_t trans_forward_duration_max;
 		param_t trans_backwards_pitch;
 		param_t trans_backwards_roll;
 		param_t trans_backwards_thrust;
