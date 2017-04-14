@@ -59,6 +59,7 @@ Kite::Kite(VtolAttitudeControl *attc) :
 	_params_handles_kite.trans_backwards_pitch = param_find("VT_T_B_PITCH");
 	_params_handles_kite.trans_backwards_roll = param_find("VT_T_B_ROLL");
 	_params_handles_kite.trans_backwards_thrust = param_find("VT_T_B_THRUST");
+	_params_handles_kite.wind_speed = param_find("VT_WIND_SPEED");
 }
 
 Kite::~Kite()
@@ -91,6 +92,9 @@ Kite::parameters_update()
 
 	param_get(_params_handles_kite.trans_backwards_thrust, &f);
 	_params_kite.trans_backwards_thrust = f;
+
+	param_get(_params_handles_kite.wind_speed, &f);
+	_params_kite.wind_speed = f;
 }
 
 void Kite::update_vtol_state()
@@ -120,12 +124,13 @@ void Kite::update_vtol_state()
 			break;
 
 		case TRANSITION_FRONT:
-			// check if we have reached sufficient airspeed
-			if ((_airspeed->indicated_airspeed_m_s >= _params_kite.airspeed_trans) || can_transition_on_ground()) {
-				_vtol_schedule.flight_mode = FW_MODE;
+			{
+				// transition_ratio for ground testing.
+				float transition_ratio = (float)hrt_elapsed_time(&_vtol_schedule.transition_start) / (_params->front_trans_time_min * 1000000.0f);
+				if ((_airspeed->indicated_airspeed_m_s >= _params_kite.airspeed_trans) || transition_ratio > 2) {
+					_vtol_schedule.flight_mode = FW_MODE;
+				}
 			}
-
-			// if ( (float)hrt_elapsed_time(&_vtol_schedule.transition_start) )
 			break;
 
 		case TRANSITION_BACK:
@@ -150,9 +155,10 @@ void Kite::update_vtol_state()
 			break;
 
 		case TRANSITION_BACK:
+			float transition_ratio = (float)hrt_elapsed_time(&_vtol_schedule.transition_start) / (_params->front_trans_time_min * 1000000.0f);
 
 			// check if we have reached the roll angle to switch to MC mode
-			if (_airspeed->indicated_airspeed_m_s <= 8) { // TODO speed
+			if (_airspeed->indicated_airspeed_m_s <= 8 && transition_ratio > 1) { // TODO speed
 				_vtol_schedule.flight_mode = MC_MODE;
 			}
 
@@ -285,6 +291,18 @@ void Kite::update_fw_state()
 	}
 }
 
+float Kite::elevatorCorrection()
+{
+	float velocity = sqrtf(
+		_local_pos->vx*_local_pos->vx +
+		_local_pos->vy*_local_pos->vy +
+		_local_pos->vz*_local_pos->vz );
+
+  float airspeed_ratio = _airspeed->indicated_airspeed_m_s/_params_kite.airspeed_trans;
+
+	return 2 * atan2f(velocity , _params_kite.wind_speed) / M_PI_F * (1 - airspeed_ratio);
+}
+
 /**
 * Write data to actuator output topic.
 */
@@ -302,9 +320,14 @@ void Kite::fill_actuator_outputs()
 	// yaw
 	_actuators_out_0->control[actuator_controls_s::INDEX_YAW] =
 		_actuators_mc_in->control[actuator_controls_s::INDEX_YAW] * _mc_yaw_weight * 0.1f;
-	// throttle
-	_actuators_out_0->control[actuator_controls_s::INDEX_THROTTLE] =
-		_actuators_mc_in->control[actuator_controls_s::INDEX_THROTTLE];
+// throttle
+	if (_vtol_mode == FIXED_WING) {
+		_actuators_out_0->control[actuator_controls_s::INDEX_THROTTLE] =
+			_actuators_fw_in->control[actuator_controls_s::INDEX_THROTTLE];
+	} else {
+		_actuators_out_0->control[actuator_controls_s::INDEX_THROTTLE] =
+			_actuators_mc_in->control[actuator_controls_s::INDEX_THROTTLE];
+	}
 
 
 	// fixed wing controls
@@ -315,17 +338,17 @@ void Kite::fill_actuator_outputs()
 		-_actuators_fw_in->control[actuator_controls_s::INDEX_ROLL] * (1 - _mc_roll_weight);
 	//pitch
 	if (_vtol_mode != FIXED_WING) {
-		_actuators_out_1->control[actuator_controls_s::INDEX_PITCH] = (1 - _mc_pitch_weight); // TODO temporary
+		_actuators_out_1->control[actuator_controls_s::INDEX_PITCH] = elevatorCorrection();
+
 	} else {
 		_actuators_out_1->control[actuator_controls_s::INDEX_PITCH] =
 			(_actuators_fw_in->control[actuator_controls_s::INDEX_PITCH] + _params->fw_pitch_trim) * (1 - _mc_pitch_weight);
 	}
 
-	// yaw
-	_actuators_out_1->control[actuator_controls_s::INDEX_YAW] = 0; // we don't have ailerons
+	// yaw - not in use
+	_actuators_out_1->control[actuator_controls_s::INDEX_YAW] = 0;
 
-	// throttle
-	_actuators_out_1->control[actuator_controls_s::INDEX_THROTTLE] =
-		_actuators_fw_in->control[actuator_controls_s::INDEX_THROTTLE];
+	// throttle - not in use
+	_actuators_out_1->control[actuator_controls_s::INDEX_THROTTLE] = 0;
 
 }

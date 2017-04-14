@@ -71,6 +71,7 @@ private:
 		float trans_backwards_pitch;
 		float trans_backwards_roll;
 		float trans_backwards_thrust;
+		float wind_speed;
 
 	} _params_kite;
 
@@ -82,6 +83,7 @@ private:
 		param_t trans_backwards_pitch;
 		param_t trans_backwards_roll;
 		param_t trans_backwards_thrust;
+		param_t wind_speed;
 	} _params_handles_kite;
 
 	// vtol mode specific for the kite
@@ -111,6 +113,11 @@ private:
 	 * set initial values before transitioning.
 	 */
 	void set_transition_starting_values();
+
+	/**
+	* calculate the elevator correction
+	*/
+	float elevatorCorrection();
 
 	/**
 	 * Update parameters.

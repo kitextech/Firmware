@@ -45,12 +45,12 @@
  *
  * @unit rad
  * @min -1.6
- * @max 1.0
+ * @max 1.6
  * @increment 0.01
  * @decimal 3
  * @group VTOL Attitude Control
 */
-PARAM_DEFINE_FLOAT(VT_T_F_ROLL, -1.57f);
+PARAM_DEFINE_FLOAT(VT_T_F_ROLL, 1.4f);
 
 /**
  * Transition forward to FW mode thrust target
@@ -62,7 +62,7 @@ PARAM_DEFINE_FLOAT(VT_T_F_ROLL, -1.57f);
  * @decimal 3
  * @group VTOL Attitude Control
 */
-PARAM_DEFINE_FLOAT(VT_T_F_THRUST, 0.5f);
+PARAM_DEFINE_FLOAT(VT_T_F_THRUST, 0.4f);
 
 /**
  * Max duration of a front transition
@@ -77,6 +77,7 @@ PARAM_DEFINE_FLOAT(VT_T_F_THRUST, 0.5f);
  * @group VTOL Attitude Control
  */
 PARAM_DEFINE_FLOAT(VT_T_F_DUR_MAX, 5.0f);
+// Not in use
 
 /**
  * Transition backwards to MC mode pitch target
@@ -88,7 +89,7 @@ PARAM_DEFINE_FLOAT(VT_T_F_DUR_MAX, 5.0f);
  * @decimal 3
  * @group VTOL Attitude Control
 */
-PARAM_DEFINE_FLOAT(VT_T_B_PITCH, 0.0f);
+PARAM_DEFINE_FLOAT(VT_T_B_PITCH, 0.3f);
 
 /**
  * Transition backwards to MC mode roll target
@@ -113,3 +114,15 @@ PARAM_DEFINE_FLOAT(VT_T_B_ROLL, 0.0f);
  * @group VTOL Attitude Control
 */
 PARAM_DEFINE_FLOAT(VT_T_B_THRUST, 0.3f);
+
+/**
+ * Windspeed
+ *
+ * @unit rad
+ * @min 0
+ * @max 20
+ * @increment 0.1
+ * @decimal 3
+ * @group VTOL Attitude Control
+*/
+PARAM_DEFINE_FLOAT(VT_WIND_SPEED, 2f);
