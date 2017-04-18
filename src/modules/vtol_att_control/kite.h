@@ -108,6 +108,9 @@ private:
 	float _pitch_transition_start;  // pitch angle at the start of transition (kite)
 	float _thrust_transition_start; // throttle value when we start the front transition
 
+	float _velocity;
+	float _airspeed_ratio;
+
 
 	/**
 	 * set initial values before transitioning.
