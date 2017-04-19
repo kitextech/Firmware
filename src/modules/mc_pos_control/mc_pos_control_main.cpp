@@ -224,7 +224,7 @@ private:
 		float thr_min;
 		float thr_tether;
 		float pitch_hvr;
-		uint32_t tet_pos_ctl;
+		float tet_pos_ctl;
 		float thr_max;
 		float thr_hover;
 		float alt_ctl_dz;
@@ -1751,13 +1751,14 @@ MulticopterPositionControl::control_position(float dt)
 {
 	/* run position & altitude controllers, if enabled (otherwise use already computed velocity setpoints) */
 
-	if (_params.tet_pos_ctl) { // We are hovering, at the surface of a sphere
+	if (_params.tet_pos_ctl > 0.5f) { // We are hovering, at the surface of a sphere
 
 		math::Vector<3> rp = _pos - _params.pos_b;
 		math::Vector<3> rt = _pos_sp - _params.pos_b;
 
-		float vectorLength = (_pos - _pos_sp).length();
-		math::Vector<3> s = ((rp % rt) % rp)*((double) vectorLength/pow(_params.tether_len, 3));
+    float vectorLength = (_pos - _pos_sp).length();
+		math::Vector<3> velDir = (rp % rt) % rp;
+    math::Vector<3> s = velDir * vectorLength / velDir.length();
 
 		_vel_sp(0) = s(0) * _params.pos_p(0);
 		_vel_sp(1) = s(1) * _params.pos_p(1);
@@ -1876,12 +1877,12 @@ MulticopterPositionControl::control_position(float dt)
 		if (_control_mode.flag_control_acceleration_enabled && _pos_sp_triplet.current.acceleration_valid) {
 			thrust_sp = math::Vector<3>(_pos_sp_triplet.current.a_x, _pos_sp_triplet.current.a_y, _pos_sp_triplet.current.a_z);
 
-		} else if (_params.tet_pos_ctl) { // We are hovering, at the surface of a sphere){
+		} else if (_params.tet_pos_ctl > 0.5f) { // We are hovering, at the surface of a sphere){
 			math::Vector<3> rp = _pos - _params.pos_b;
 
 			thrust_sp = vel_err.emult(_params.vel_p) + _vel_err_d.emult(_params.vel_d)
-			+ _thrust_int - math::Vector<3>(0.0f, 0.0f, _params.thr_hover)
-			+ rp * _params.thr_tether * _params.thr_hover / _params.tether_len;
+				+ _thrust_int + math::Vector<3>(0.0f, 0.0f, -_params.thr_hover)
+				+ rp / rp.length() * _params.thr_tether * _params.thr_hover ;
 		} else {
 			thrust_sp = vel_err.emult(_params.vel_p) + _vel_err_d.emult(_params.vel_d)
 			+ _thrust_int - math::Vector<3>(0.0f, 0.0f, _params.thr_hover);
@@ -2251,12 +2252,12 @@ MulticopterPositionControl::generate_attitude_setpoint(float dt)
 	if (!_control_mode.flag_control_velocity_enabled) {
 		_att_sp.roll_body = _manual.y * _params.man_roll_max;
 
-		/* Enable static pitch control when AUX1 is enabled (above 0) by KiteX */
-		if (_manual.aux1 < 0) {
-			_att_sp.pitch_body = -_manual.x * _params.man_pitch_max;
-		} else {
-			_att_sp.pitch_body = _params.pitch_hvr;
-		}
+		// /* Enable static pitch control when AUX1 is enabled (above 0) by KiteX */
+		// if (_params.tet_pos_ctl > 0.5f) {
+		// 	_att_sp.pitch_body = _params.pitch_hvr;
+		// } else {
+		// 	_att_sp.pitch_body = -_manual.x * _params.man_pitch_max;
+		// }
 
 		/* only if optimal recovery is not used, modify roll/pitch */
 		if (_params.opt_recover <= 0) {
@@ -2398,8 +2399,8 @@ MulticopterPositionControl::task_main()
 		}
 
 		/* reset yaw setpoint while AUX1 is high Added by Andreas
-		 for manual tetheted flight */
-		if (_manual.aux1 > 0) {
+		for manual tetheted flight */
+		if (_params.tet_pos_ctl > 0.5f) {
 			_reset_yaw_sp = true;
 		}
 

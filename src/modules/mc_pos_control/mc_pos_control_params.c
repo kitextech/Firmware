@@ -111,9 +111,11 @@ PARAM_DEFINE_FLOAT(MPC_THR_TETHER, 0.2f);
  * @max 1
  * @value 0 standard 3D position flight
  * @value 1 Sphere following
+ * @decimal 1
+ * @increment 0.1
  * @group Multicopter Position Control
  */
-PARAM_DEFINE_INT32(MPC_TET_POS_CTL, 0);
+PARAM_DEFINE_FLOAT(MPC_TET_POS_CTL, 0);
 
 /**
  * Minimum thrust in auto thrust control
