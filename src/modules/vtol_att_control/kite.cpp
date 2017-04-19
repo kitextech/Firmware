@@ -47,7 +47,7 @@ Kite::Kite(VtolAttitudeControl *attc) :
 	_roll_transition_start(0.0f),
 	_pitch_transition_start(0.0f),
 	_thrust_transition_start(0.0f),
-	_velocity(0.0f),
+	_speed(0.0f),
 	_airspeed_ratio(0.0f)
 {
 	_vtol_schedule.flight_mode = MC_MODE;
@@ -56,6 +56,7 @@ Kite::Kite(VtolAttitudeControl *attc) :
 	_params_handles_kite.airspeed_trans = param_find("VT_ARSP_TRANS");
 	_params_handles_kite.trans_forward_roll = param_find("VT_T_F_ROLL");
 	_params_handles_kite.trans_forward_thrust = param_find("VT_T_F_THRUST");
+	_params_handles_kite.trans_forward_pitch = param_find("VT_T_F_PITCH");
 	_params_handles_kite.trans_forward_duration_max = param_find("VT_T_F_DUR_MAX"); // not currently in use
 	_params_handles_kite.trans_backwards_pitch = param_find("VT_T_B_PITCH");
 	_params_handles_kite.trans_backwards_roll = param_find("VT_T_B_ROLL");
@@ -78,6 +79,9 @@ Kite::parameters_update()
 
 	param_get(_params_handles_kite.trans_forward_roll, &f);
 	_params_kite.trans_forward_roll = f;
+
+	param_get(_params_handles_kite.trans_forward_pitch, &f);
+	_params_kite.trans_forward_pitch = f;
 
 	param_get(_params_handles_kite.trans_forward_thrust, &f);
 	_params_kite.trans_forward_thrust = f;
@@ -113,34 +117,35 @@ void Kite::update_vtol_state()
 	// float pitch = euler.theta();
 
 	// update velocity
-	_velocity = sqrtf(
+	_speed = sqrtf(
 		_local_pos->vx*_local_pos->vx +
 		_local_pos->vy*_local_pos->vy +
 		_local_pos->vz*_local_pos->vz );
 
-	_airspeed_ratio = _velocity/_params_kite.airspeed_trans;
-	_airspeed_ratio = math::constrain(_airspeed_ratio, 0.0f, 1.0f);
+	_airspeed_ratio = _speed/_params_kite.airspeed_trans; // use _airspeed->indicated_airspeed_m_s
 
 	if (_attc->is_fixed_wing_requested()) { // switchig to FW mode
 		switch (_vtol_schedule.flight_mode) {
 		case MC_MODE:
 			// initialise a front transition
 			_vtol_schedule.flight_mode 	= TRANSITION_FRONT;
-			_vtol_schedule.transition_start = hrt_absolute_time();
 			set_transition_starting_values();
+			update_transition_ratio();
 			break;
 
 		case FW_MODE:
 			break;
 
 		case TRANSITION_FRONT:
-			{
 				// transition_ratio for ground testing.
-				float transition_ratio = (float)hrt_elapsed_time(&_vtol_schedule.transition_start) / (_params->front_trans_time_min * 1000000.0f);
-				if (_airspeed_ratio >= 1.0f || transition_ratio >= 2.0f ) { //_airspeed->indicated_airspeed_m_s //  ||
+				update_transition_ratio();
+				if (_airspeed_ratio >= 1.0f) {
 					_vtol_schedule.flight_mode = FW_MODE;
 				}
-			}
+				else if (_transition_ratio >= 2.0f) {
+					_vtol_schedule.flight_mode = FW_MODE; // FIXME: For testing
+					// _vtol_schedule.flight_mode = TRANSITION_BACK;
+				}
 			break;
 
 		case TRANSITION_BACK:
@@ -154,9 +159,9 @@ void Kite::update_vtol_state()
 			break;
 
 		case FW_MODE:
-			_vtol_schedule.flight_mode 	= TRANSITION_BACK;
-			_vtol_schedule.transition_start = hrt_absolute_time();
+			_vtol_schedule.flight_mode = TRANSITION_BACK;
 			set_transition_starting_values();
+			update_transition_ratio();
 			break;
 
 		case TRANSITION_FRONT:
@@ -165,10 +170,9 @@ void Kite::update_vtol_state()
 			break;
 
 		case TRANSITION_BACK:
-			float transition_ratio = (float)hrt_elapsed_time(&_vtol_schedule.transition_start) / (_params->front_trans_time_min * 1000000.0f);
-
+			update_transition_ratio();
 			// check if we have reached the roll angle to switch to MC mode
-			if (_airspeed_ratio <= 0.5f || transition_ratio >= 1.0f) { // TODO speed // _airspeed->indicated_airspeed_m_s
+			if (_airspeed_ratio <= 0.5f || _transition_ratio >= 1.0f) {
 				_vtol_schedule.flight_mode = MC_MODE;
 			}
 
@@ -202,53 +206,31 @@ void Kite::update_vtol_state()
 
 void Kite::update_transition_state()
 {
+	float t = math::constrain(_transition_ratio, 0.0f, 1.0f);
+
 	if (_vtol_schedule.flight_mode == TRANSITION_FRONT) {
-
-		float transition_ratio = (float)hrt_elapsed_time(&_vtol_schedule.transition_start) / (_params->front_trans_time_min * 1000000.0f);
-
-		if ( transition_ratio < 1.0f ) {
-			/** create time dependant pitch angle set point + 0.2 rad overlap over the switch value*/
-			_v_att_sp->roll_body = _roll_transition_start + ( _params_kite.trans_forward_roll - _roll_transition_start) * transition_ratio;
-			_v_att_sp->thrust = _thrust_transition_start + ( _params_kite.trans_forward_thrust - _thrust_transition_start) * transition_ratio;
-		} else {
-			_v_att_sp->roll_body = _params_kite.trans_forward_roll;
-			_v_att_sp->thrust = _params_kite.trans_forward_thrust;
-		}
-
-		_v_att_sp->pitch_body = _pitch_transition_start; // TODO go towards 0, don't relax rules
-
-	} else if (_vtol_schedule.flight_mode == TRANSITION_BACK) {
+		/** create time dependant pitch angle set point + 0.2 rad overlap over the switch value*/
+		_v_att_sp->roll_body = (1.0f - t)*_roll_transition_start + t*_params_kite.trans_forward_roll;
+		_v_att_sp->thrust = (1.0f - t)*_thrust_transition_start + t*_params_kite.trans_forward_thrust;
+		_v_att_sp->pitch_body = (1.0f - t)*_pitch_transition_start + t*_params_kite.trans_forward_pitch;
+	}
+	else if (_vtol_schedule.flight_mode == TRANSITION_BACK) {
 
 		if (!flag_idle_mc) {
 			set_idle_mc();
 			flag_idle_mc = true;
 		}
 
-		float transition_ratio = (float)hrt_elapsed_time(&_vtol_schedule.transition_start) / (_params->front_trans_time_min * 1000000.0f);
-
-		if ( transition_ratio < 1.0f ) {
-			/** create time dependant pitch angle set point + 0.2 rad overlap over the switch value*/
-			_v_att_sp->pitch_body = _pitch_transition_start + ( _params_kite.trans_backwards_pitch - _pitch_transition_start) * transition_ratio;
-			_v_att_sp->roll_body = _roll_transition_start + ( _params_kite.trans_backwards_roll - _roll_transition_start) * transition_ratio;
-			_v_att_sp->thrust = _thrust_transition_start + ( _params_kite.trans_backwards_thrust - _thrust_transition_start) * transition_ratio;
-		} else {
-			_v_att_sp->pitch_body = _params_kite.trans_backwards_pitch;
-			_v_att_sp->roll_body = _params_kite.trans_backwards_roll;
-			_v_att_sp->thrust = _params_kite.trans_backwards_thrust;
-		}
-
-
+		/** create time dependant pitch angle set point + 0.2 rad overlap over the switch value*/
+		_v_att_sp->pitch_body = (1.0f - t)*_pitch_transition_start + t*_params_kite.trans_backwards_pitch;
+		_v_att_sp->roll_body = (1.0f - t)*_roll_transition_start + t*_params_kite.trans_backwards_roll;
+		_v_att_sp->thrust = (1.0f - t)*_thrust_transition_start + t*_params_kite.trans_backwards_thrust;
 	}
 
-	// float ; // _airspeed->indicated_airspeed_m_s
 	/** smoothly move control weight to MC */
-	_mc_roll_weight = 1.0f - _airspeed_ratio;
-	_mc_pitch_weight = 1.0f - _airspeed_ratio;
-	_mc_yaw_weight = 1.0f - _airspeed_ratio;
-
-	_mc_roll_weight = math::constrain(_mc_roll_weight, 0.0f, 1.0f);
-	_mc_yaw_weight = math::constrain(_mc_yaw_weight, 0.0f, 1.0f);
-	_mc_pitch_weight = math::constrain(_mc_pitch_weight, 0.0f, 1.0f);
+	_mc_roll_weight = math::constrain(1.0f - _airspeed_ratio, 0.0f, 1.0f);
+	_mc_yaw_weight = math::constrain(1.0f - _airspeed_ratio, 0.0f, 1.0f);
+	_mc_pitch_weight = math::constrain(1.0f - _airspeed_ratio, 0.0f, 1.0f);
 
 	// compute desired attitude and thrust setpoint for the transition
 
@@ -270,15 +252,21 @@ void Kite::waiting_on_tecs()
 
 void Kite::set_transition_starting_values()
 {
+	_vtol_schedule.transition_start = hrt_absolute_time();
 
 	matrix::Eulerf euler = matrix::Quatf(_v_att->q);
 	// phi, theta, psi
 
 	_yaw_transition_start = euler.psi();
-	// _yaw_transition_start = 0.8;
-	_thrust_transition_start = _mc_virtual_att_sp->thrust;
-	_pitch_transition_start = _mc_virtual_att_sp->pitch_body;
-	_roll_transition_start = _mc_virtual_att_sp->roll_body;
+
+	_thrust_transition_start = _vtol_schedule.flight_mode == FW_MODE ? _fw_virtual_att_sp->thrust : _mc_virtual_att_sp->thrust;
+	_pitch_transition_start = euler.theta();
+	_roll_transition_start = euler.phi();
+}
+
+void Kite::update_transition_ratio()
+{
+	_transition_ratio = (float)hrt_elapsed_time(&_vtol_schedule.transition_start) / (_params->front_trans_time_min * 1000000.0f);
 }
 
 void Kite::update_mc_state()
@@ -304,8 +292,7 @@ void Kite::update_fw_state()
 
 float Kite::elevatorCorrection()
 {
-
-	return  2 * (1.0f - _airspeed_ratio); // simplifed
+	return  2 * (1.0f - math::constrain(_airspeed_ratio, 0.0f, 1.0f)); // simplifed
 }
 
 /**
@@ -316,20 +303,7 @@ void Kite::fill_actuator_outputs()
 	// multirotor controls
 	_actuators_out_0->timestamp = _actuators_mc_in->timestamp;
 
-	if (_vtol_mode != FIXED_WING) {
-		// roll
-		_actuators_out_0->control[actuator_controls_s::INDEX_ROLL] =
-			_actuators_mc_in->control[actuator_controls_s::INDEX_ROLL] * _mc_roll_weight; // potentially dangerous
-		// pitch
-		_actuators_out_0->control[actuator_controls_s::INDEX_PITCH] =
-			_actuators_mc_in->control[actuator_controls_s::INDEX_PITCH] * _mc_pitch_weight;
-		// yaw
-		_actuators_out_0->control[actuator_controls_s::INDEX_YAW] = //0;
-			_actuators_mc_in->control[actuator_controls_s::INDEX_YAW] * 0.1f; //* _mc_yaw_weight * 0.3f;
-		// throttle
-		_actuators_out_0->control[actuator_controls_s::INDEX_THROTTLE] =
-			_actuators_mc_in->control[actuator_controls_s::INDEX_THROTTLE];
-	} else {
+	if (_vtol_schedule.flight_mode == FW_MODE) {
 		// roll
 		_actuators_out_0->control[actuator_controls_s::INDEX_ROLL] = 0;
 		// pitch
@@ -340,24 +314,50 @@ void Kite::fill_actuator_outputs()
 		_actuators_out_0->control[actuator_controls_s::INDEX_THROTTLE] =
 			_actuators_fw_in->control[actuator_controls_s::INDEX_THROTTLE];
 	}
+	else {
+		// roll
+		_actuators_out_0->control[actuator_controls_s::INDEX_ROLL] =
+			_actuators_mc_in->control[actuator_controls_s::INDEX_ROLL] * _mc_roll_weight; // potentially dangerous
+		// pitch
+		_actuators_out_0->control[actuator_controls_s::INDEX_PITCH] =
+			_actuators_mc_in->control[actuator_controls_s::INDEX_PITCH] * _mc_pitch_weight;
+		// yaw
+		_actuators_out_0->control[actuator_controls_s::INDEX_YAW] =
+			_actuators_mc_in->control[actuator_controls_s::INDEX_YAW] * 0.1f; //* _mc_yaw_weight * 0.3f;
+		// throttle
+		_actuators_out_0->control[actuator_controls_s::INDEX_THROTTLE] =
+			_actuators_mc_in->control[actuator_controls_s::INDEX_THROTTLE];
+	}
 
-	// fixed wing controls
+	// Fixed wing controls
 	_actuators_out_1->timestamp = _actuators_fw_in->timestamp;
 
-	//roll
-	_actuators_out_1->control[actuator_controls_s::INDEX_ROLL] = // 0.0f;
-		_actuators_fw_in->control[actuator_controls_s::INDEX_ROLL] * (1 - _mc_roll_weight);
-	//pitch
-	if (_vtol_mode != FIXED_WING) {
+	if (_vtol_schedule.flight_mode == FW_MODE) {
+		// pitch
+		_actuators_out_1->control[actuator_controls_s::INDEX_PITCH] = 1.0f;
+
+		// roll
+		_actuators_out_1->control[actuator_controls_s::INDEX_ROLL] =
+			_actuators_fw_in->control[actuator_controls_s::INDEX_ROLL];
+
+		// yaw - not in use
+		_actuators_out_1->control[actuator_controls_s::INDEX_YAW] = 0.0f;
+
+		// throttle - not in use
+		_actuators_out_1->control[actuator_controls_s::INDEX_THROTTLE] = 0.0f;
+	}
+	else {
+		// pitch
 		_actuators_out_1->control[actuator_controls_s::INDEX_PITCH] = 1 - elevatorCorrection();
 
-	} else {
-		_actuators_out_1->control[actuator_controls_s::INDEX_PITCH] = 1.0f;
+		// roll
+		_actuators_out_1->control[actuator_controls_s::INDEX_ROLL] =
+			_actuators_fw_in->control[actuator_controls_s::INDEX_ROLL] * (1 - _mc_roll_weight);
+
+		// yaw - not in use
+		_actuators_out_1->control[actuator_controls_s::INDEX_YAW] = 0.0f;
+
+		// throttle - not in use
+		_actuators_out_1->control[actuator_controls_s::INDEX_THROTTLE] = 0.0f;
 	}
-	// yaw - not in use
-	_actuators_out_1->control[actuator_controls_s::INDEX_YAW] = 0.0f;
-
-	// throttle - not in use
-	_actuators_out_1->control[actuator_controls_s::INDEX_THROTTLE] = 0.0f;
-
 }

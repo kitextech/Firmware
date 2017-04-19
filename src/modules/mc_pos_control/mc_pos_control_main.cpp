@@ -338,7 +338,6 @@ private:
 
 	void control_looping(float dt);
 
-
 	// KiteX pure helpers
 	float signed_angle(const math::Vector<2> &left, const math::Vector<2> &right);
 	float square_distance_to_path(const int path_i);
@@ -685,8 +684,8 @@ MulticopterPositionControl::parameters_update(bool force)
 //		_params.e_pi_y = calculate_e_pi_y(_params.phiC, _params.thetaC);
 
 		// KiteX: Update projection plane and path
-		update_pi(_params.phiC, _params.thetaC);
-		update_pi_path(_params.turning_radius);
+		// update_pi(_params.phiC, _params.thetaC); // FIXME: turn on
+		// update_pi_path(_params.turning_radius);
 
 		param_get(_params_handles.xy_p, &v);
 		_params.pos_p(0) = v;
@@ -1470,7 +1469,7 @@ MulticopterPositionControl::cross_sphere_line(const math::Vector<3> &sphere_c, c
 void MulticopterPositionControl::control_looping(float dt)
 {
 	update_pi_projection();
-	update_pi_target_point(0.75*_params.turning_radius);
+	update_pi_target_point(0.75f*_params.turning_radius);
 	update_pi_arc();
 	update_pi_roll_rate();
 }

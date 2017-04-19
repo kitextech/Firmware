@@ -53,6 +53,18 @@
 PARAM_DEFINE_FLOAT(VT_T_F_ROLL, 1.4f);
 
 /**
+ * Transition forward to FW mode pitch target
+ *
+ * @unit rad
+ * @min -1.6
+ * @max 1.6
+ * @increment 0.01
+ * @decimal 3
+ * @group VTOL Attitude Control
+*/
+PARAM_DEFINE_FLOAT(VT_T_F_PITCH, 0.0f);
+
+/**
  * Transition forward to FW mode thrust target
  *
  * @unit normalized

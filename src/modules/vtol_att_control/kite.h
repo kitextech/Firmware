@@ -67,6 +67,7 @@ private:
 		float airspeed_trans;
 		float trans_forward_roll;
 		float trans_forward_thrust;
+		float trans_forward_pitch;
 		float trans_forward_duration_max;
 		float trans_backwards_pitch;
 		float trans_backwards_roll;
@@ -79,6 +80,7 @@ private:
 		param_t airspeed_trans;
 		param_t trans_forward_roll;
 		param_t trans_forward_thrust;
+		param_t trans_forward_pitch;
 		param_t trans_forward_duration_max;
 		param_t trans_backwards_pitch;
 		param_t trans_backwards_roll;
@@ -108,9 +110,10 @@ private:
 	float _pitch_transition_start;  // pitch angle at the start of transition (kite)
 	float _thrust_transition_start; // throttle value when we start the front transition
 
-	float _velocity;
+	float _speed;
 	float _airspeed_ratio;
 
+	float _transition_ratio;
 
 	/**
 	 * set initial values before transitioning.
@@ -127,5 +130,9 @@ private:
 	 */
 	void parameters_update(); // deleted virtual
 
+	/**
+	 * Update transition ratio based on time passed since start.
+	 */
+	void update_transition_ratio();
 };
 #endif
