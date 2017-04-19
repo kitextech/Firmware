@@ -1178,9 +1178,6 @@ MulticopterPositionControl::control_non_manual(float dt)
 		/* offboard control */
 		control_offboard(dt);
 		_mode_auto = false;
-	}
-	else if (_control_mode.flag_control_kite_looping) {
-		control_looping(dt);
 	} else {
 		_hold_offboard_xy = false;
 		_hold_offboard_z = false;
@@ -1473,7 +1470,7 @@ MulticopterPositionControl::cross_sphere_line(const math::Vector<3> &sphere_c, c
 void MulticopterPositionControl::control_looping(float dt)
 {
 	update_pi_projection();
-	update_pi_target_point(0.4*_params.turning_radius);
+	update_pi_target_point(0.75*_params.turning_radius);
 	update_pi_arc();
 	update_pi_roll_rate();
 }
@@ -1744,7 +1741,6 @@ MulticopterPositionControl::do_control(float dt)
 
 		_hold_offboard_xy = false;
 		_hold_offboard_z = false;
-
 	} else {
 		control_non_manual(dt);
 	}
