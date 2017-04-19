@@ -322,8 +322,8 @@ void Kite::fill_actuator_outputs()
 		_actuators_out_0->control[actuator_controls_s::INDEX_PITCH] =
 			_actuators_mc_in->control[actuator_controls_s::INDEX_PITCH] * _mc_pitch_weight;
 		// yaw
-		_actuators_out_0->control[actuator_controls_s::INDEX_YAW] =
-			_actuators_mc_in->control[actuator_controls_s::INDEX_YAW] * 0.1f; //* _mc_yaw_weight * 0.3f;
+		_actuators_out_0->control[actuator_controls_s::INDEX_YAW] = 0;
+			// _actuators_mc_in->control[actuator_controls_s::INDEX_YAW] * 0.1f; //* _mc_yaw_weight * 0.3f;
 		// throttle
 		_actuators_out_0->control[actuator_controls_s::INDEX_THROTTLE] =
 			_actuators_mc_in->control[actuator_controls_s::INDEX_THROTTLE];

@@ -2251,12 +2251,12 @@ MulticopterPositionControl::generate_attitude_setpoint(float dt)
 	if (!_control_mode.flag_control_velocity_enabled) {
 		_att_sp.roll_body = _manual.y * _params.man_roll_max;
 
-		// /* Enable static pitch control when AUX1 is enabled (above 0) by KiteX */
-		// if (_params.tet_pos_ctl > 0.5f) {
-		// 	_att_sp.pitch_body = _params.pitch_hvr;
-		// } else {
-		// 	_att_sp.pitch_body = -_manual.x * _params.man_pitch_max;
-		// }
+		/* Enable static pitch control when AUX1 is enabled (above 0) by KiteX */
+		if (manual.aux1 > 0.0f) {
+			_att_sp.pitch_body = _params.pitch_hvr;
+		} else {
+			_att_sp.pitch_body = -_manual.x * _params.man_pitch_max;
+		}
 
 		/* only if optimal recovery is not used, modify roll/pitch */
 		if (_params.opt_recover <= 0) {
@@ -2399,7 +2399,7 @@ MulticopterPositionControl::task_main()
 
 		/* reset yaw setpoint while AUX1 is high Added by Andreas
 		for manual tetheted flight */
-		if (_params.tet_pos_ctl > 0.5f) {
+		if (_params.tet_pos_ctl > 0.5f || manual.aux1 > 0.0f) {
 			_reset_yaw_sp = true;
 		}
 
