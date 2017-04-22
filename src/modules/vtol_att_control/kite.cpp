@@ -237,7 +237,7 @@ void Kite::update_transition_state()
 
 	/** smoothly move control weight to MC */
 	_mc_roll_weight = math::constrain(1.0f - _airspeed_ratio, 0.0f, 1.0f);
-	_mc_yaw_weight = math::constrain(1.0f - _airspeed_ratio, 0.0f, 1.0f);
+	_mc_yaw_weight = math::constrain(1.0f - _airspeed_ratio , 0.0f, 1.0f);
 	_mc_pitch_weight = math::constrain(1.0f - _airspeed_ratio, 0.0f, 1.0f);
 
 	// compute desired attitude and thrust setpoint for the transition
@@ -277,6 +277,10 @@ void Kite::update_transition_ratio()
 void Kite::update_mc_state()
 {
 	VtolType::update_mc_state();
+
+	_mc_roll_weight = 1;
+	_mc_yaw_weight = 1;
+	_mc_pitch_weight = 1;
 
 	// SAFETY SWITCH
 	if (_manual_control_sp->aux2 > 0.5f) {
@@ -351,63 +355,36 @@ void Kite::fill_actuator_outputs()
 		return;
 	}
 
-	if (_vtol_schedule.flight_mode == FW_MODE) {
-		// roll
-		_actuators_out_0->control[actuator_controls_s::INDEX_ROLL] = 0;
-		// pitch
-		_actuators_out_0->control[actuator_controls_s::INDEX_PITCH] = 0;
-		// yaw
-		_actuators_out_0->control[actuator_controls_s::INDEX_YAW] = 0;
-		// throttle
-		_actuators_out_0->control[actuator_controls_s::INDEX_THROTTLE] =
-			_actuators_fw_in->control[actuator_controls_s::INDEX_THROTTLE];
-	}
-	else {
-		// roll
-		_actuators_out_0->control[actuator_controls_s::INDEX_ROLL] =
-			_actuators_mc_in->control[actuator_controls_s::INDEX_ROLL] * _mc_roll_weight;
-		// pitch
-		_actuators_out_0->control[actuator_controls_s::INDEX_PITCH] =
-			_actuators_mc_in->control[actuator_controls_s::INDEX_PITCH] * _mc_pitch_weight;
-		// yaw
-		_actuators_out_0->control[actuator_controls_s::INDEX_YAW] = // NOT USING ROLL WEIGHT
-			_actuators_mc_in->control[actuator_controls_s::INDEX_YAW] * _mc_roll_weight; //* _mc_yaw_weight * 0.3f;
-		// throttle
-		_actuators_out_0->control[actuator_controls_s::INDEX_THROTTLE] =
-			_actuators_mc_in->control[actuator_controls_s::INDEX_THROTTLE];
-	}
+	// roll
+	_actuators_out_0->control[actuator_controls_s::INDEX_ROLL] =
+		_actuators_mc_in->control[actuator_controls_s::INDEX_ROLL] * _mc_roll_weight;
+	// pitch
+	_actuators_out_0->control[actuator_controls_s::INDEX_PITCH] =
+		_actuators_mc_in->control[actuator_controls_s::INDEX_PITCH] * _mc_pitch_weight;
+	// yaw
+	_actuators_out_0->control[actuator_controls_s::INDEX_YAW] =
+		_actuators_mc_in->control[actuator_controls_s::INDEX_YAW] * _mc_yaw_weight;
+	// throttle
+	_actuators_out_0->control[actuator_controls_s::INDEX_THROTTLE] =
+		(_vtol_schedule.flight_mode == FW_MODE)
+			? _actuators_fw_in->control[actuator_controls_s::INDEX_THROTTLE]
+			: _actuators_mc_in->control[actuator_controls_s::INDEX_THROTTLE];
+
 
 	// Fixed wing controls
 	_actuators_out_1->timestamp = _actuators_fw_in->timestamp;
 
-	if (_vtol_schedule.flight_mode == FW_MODE) {
-		// pitch
-		_actuators_out_1->control[actuator_controls_s::INDEX_PITCH] = 0.7f - elevator_correction()
-			+ 0.5f * _actuators_fw_in->control[actuator_controls_s::INDEX_PITCH];
+	// pitch
+	_actuators_out_1->control[actuator_controls_s::INDEX_PITCH] = 0.6f
+	- elevator_correction()
+	- _actuators_fw_in->control[actuator_controls_s::INDEX_PITCH];
 
-		// roll
-		_actuators_out_1->control[actuator_controls_s::INDEX_ROLL] =
-			_actuators_fw_in->control[actuator_controls_s::INDEX_ROLL];
+	// roll
+	_actuators_out_1->control[actuator_controls_s::INDEX_ROLL] =
+		_actuators_fw_in->control[actuator_controls_s::INDEX_ROLL] * (1 - _mc_roll_weight);
 
-		// yaw - not in use
-		_actuators_out_1->control[actuator_controls_s::INDEX_YAW] = 0.0f;
-
-		// throttle - not in use
-		_actuators_out_1->control[actuator_controls_s::INDEX_THROTTLE] = 0.0f;
-	}
-	else {
-		// pitch
-		_actuators_out_1->control[actuator_controls_s::INDEX_PITCH] = 0.7f - elevator_correction()
-			+ 0.5f * _actuators_fw_in->control[actuator_controls_s::INDEX_PITCH];
-
-		// roll
-		_actuators_out_1->control[actuator_controls_s::INDEX_ROLL] =
-			_actuators_fw_in->control[actuator_controls_s::INDEX_ROLL] * (1 - _mc_roll_weight);
-
-		// yaw - not in use
-		_actuators_out_1->control[actuator_controls_s::INDEX_YAW] = 0.0f;
-
-		// throttle - not in use
-		_actuators_out_1->control[actuator_controls_s::INDEX_THROTTLE] = 0.0f;
-	}
+	// yaw - not in use
+	_actuators_out_1->control[actuator_controls_s::INDEX_YAW] = 0.0f;
+	// throttle - not in use
+	_actuators_out_1->control[actuator_controls_s::INDEX_THROTTLE] = 0.0f;
 }
