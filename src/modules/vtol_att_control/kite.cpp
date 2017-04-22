@@ -224,10 +224,10 @@ void Kite::update_transition_state()
 	}
 	else if (_vtol_schedule.flight_mode == TRANSITION_BACK) {
 
-		if (!flag_idle_mc) {
-			set_idle_mc();
-			flag_idle_mc = true;
-		}
+		// if (!flag_idle_mc) {
+		// 	set_idle_mc();
+		// 	flag_idle_mc = true;
+		// }
 
 		/** create time dependant pitch angle set point + 0.2 rad overlap over the switch value*/
 		_v_att_sp->roll_body = (1.0f - t)*_roll_transition_start + t*_params_kite.trans_backwards_roll;
@@ -291,26 +291,31 @@ void Kite::update_mc_state()
 		memcpy(&_v_att_sp->q_d[0], &q_sp.data[0], sizeof(_v_att_sp->q_d));
 	}
 
-	// set idle speed for rotary wing mode
-	if (!flag_idle_mc) {
-		set_idle_mc();
-		flag_idle_mc = true;
-	}
+	// // set idle speed for rotary wing mode
+	// if (!flag_idle_mc) {
+	// 	set_idle_mc();
+	// 	flag_idle_mc = true;
+	// }
 }
 
 void Kite::update_fw_state()
 {
 	VtolType::update_fw_state();
 
-	if (flag_idle_mc) {
-		set_idle_fw();
-		flag_idle_mc = false;
-	}
+	_mc_roll_weight = 0.0f;
+	_mc_yaw_weight = 0.0f;
+	_mc_pitch_weight = 0.0f;
+
+
+	// if (flag_idle_mc) {
+	// 	set_idle_fw();
+	// 	flag_idle_mc = false;
+	// }
 }
 
 float Kite::elevator_correction()
 {
-	return  1.7f * (1.0f - math::constrain(_airspeed_ratio, 0.0f, 1.0f)); // simplifed
+	return 1.6f * (_vtol_schedule.flight_mode == FW_MODE ? 0 : (1.0f - math::constrain(_airspeed_ratio , 0.0f, 1.0f))); // simplifed
 }
 
 /**
