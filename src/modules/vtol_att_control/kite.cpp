@@ -124,7 +124,12 @@ void Kite::update_vtol_state()
 
 	_airspeed_ratio = _speed/_params_kite.airspeed_trans; // use _airspeed->indicated_airspeed_m_s
 
-	if (_attc->is_fixed_wing_requested()) { // switchig to FW mode
+	// SAFETY SWITCH go directly to MC mode
+	if (_manual_control_sp->aux2 > 0.5f) {
+		_vtol_schedule.flight_mode = MC_MODE;
+
+
+	} else if (_attc->is_fixed_wing_requested()) { // switchig to FW mode
 		switch (_vtol_schedule.flight_mode) {
 		case MC_MODE:
 			// initialise a front transition
@@ -248,9 +253,6 @@ void Kite::update_transition_state()
 void Kite::waiting_on_tecs()
 {
 	// TODO check -- don't do anything
-
-	// copy the last trust value from the front transition
-	//_v_att_sp->thrust = _thrust_transition;
 }
 
 void Kite::set_transition_starting_values(bool forward)
@@ -276,6 +278,19 @@ void Kite::update_mc_state()
 {
 	VtolType::update_mc_state();
 
+	// SAFETY SWITCH
+	if (_manual_control_sp->aux2 > 0.5f) {
+
+		_v_att_sp->roll_body = 0;
+		_v_att_sp->pitch_body = 0;
+		_v_att_sp->yaw_body = _yaw_transition_start;
+		_v_att_sp->thrust = 0.6;
+
+		math::Quaternion q_sp;
+		q_sp.from_euler(_v_att_sp->roll_body, _v_att_sp->pitch_body, _v_att_sp->yaw_body);
+		memcpy(&_v_att_sp->q_d[0], &q_sp.data[0], sizeof(_v_att_sp->q_d));
+	}
+
 	// set idle speed for rotary wing mode
 	if (!flag_idle_mc) {
 		set_idle_mc();
@@ -295,7 +310,7 @@ void Kite::update_fw_state()
 
 float Kite::elevator_correction()
 {
-	return  1.7 * (1.0f - math::constrain(_airspeed_ratio, 0.0f, 1.0f)); // simplifed
+	return  1.7f * (1.0f - math::constrain(_airspeed_ratio, 0.0f, 1.0f)); // simplifed
 }
 
 /**
@@ -305,6 +320,31 @@ void Kite::fill_actuator_outputs()
 {
 	// multirotor controls
 	_actuators_out_0->timestamp = _actuators_mc_in->timestamp;
+
+	// SAFETY SWITCH
+	if (_manual_control_sp->aux2 > 0.5f) {
+		// roll
+		_actuators_out_0->control[actuator_controls_s::INDEX_ROLL] =
+			_actuators_mc_in->control[actuator_controls_s::INDEX_ROLL];
+		// pitch
+		_actuators_out_0->control[actuator_controls_s::INDEX_PITCH] =
+			_actuators_mc_in->control[actuator_controls_s::INDEX_PITCH];
+		// yaw
+		_actuators_out_0->control[actuator_controls_s::INDEX_YAW] =
+			_actuators_mc_in->control[actuator_controls_s::INDEX_YAW];
+		// throttle
+		_actuators_out_0->control[actuator_controls_s::INDEX_THROTTLE] =
+			_actuators_mc_in->control[actuator_controls_s::INDEX_THROTTLE];
+
+		// pitch
+		_actuators_out_1->control[actuator_controls_s::INDEX_PITCH] = -1;
+		// roll
+		_actuators_out_1->control[actuator_controls_s::INDEX_ROLL] = 0;
+		_actuators_out_1->control[actuator_controls_s::INDEX_YAW] = 0.0f; 		// yaw - not in use
+		_actuators_out_1->control[actuator_controls_s::INDEX_THROTTLE] = 0.0f; 		// throttle - not in use
+
+		return;
+	}
 
 	if (_vtol_schedule.flight_mode == FW_MODE) {
 		// roll
@@ -320,13 +360,13 @@ void Kite::fill_actuator_outputs()
 	else {
 		// roll
 		_actuators_out_0->control[actuator_controls_s::INDEX_ROLL] =
-			_actuators_mc_in->control[actuator_controls_s::INDEX_ROLL] * _mc_roll_weight; // potentially dangerous
+			_actuators_mc_in->control[actuator_controls_s::INDEX_ROLL] * _mc_roll_weight;
 		// pitch
 		_actuators_out_0->control[actuator_controls_s::INDEX_PITCH] =
 			_actuators_mc_in->control[actuator_controls_s::INDEX_PITCH] * _mc_pitch_weight;
 		// yaw
-		_actuators_out_0->control[actuator_controls_s::INDEX_YAW] = 0;
-			// _actuators_mc_in->control[actuator_controls_s::INDEX_YAW] * 0.1f; //* _mc_yaw_weight * 0.3f;
+		_actuators_out_0->control[actuator_controls_s::INDEX_YAW] = // NOT USING ROLL WEIGHT
+			_actuators_mc_in->control[actuator_controls_s::INDEX_YAW] * _mc_roll_weight; //* _mc_yaw_weight * 0.3f;
 		// throttle
 		_actuators_out_0->control[actuator_controls_s::INDEX_THROTTLE] =
 			_actuators_mc_in->control[actuator_controls_s::INDEX_THROTTLE];
@@ -337,7 +377,7 @@ void Kite::fill_actuator_outputs()
 
 	if (_vtol_schedule.flight_mode == FW_MODE) {
 		// pitch
-		_actuators_out_1->control[actuator_controls_s::INDEX_PITCH] = 1 - elevator_correction()
+		_actuators_out_1->control[actuator_controls_s::INDEX_PITCH] = 0.7f - elevator_correction()
 			+ 0.5f * _actuators_fw_in->control[actuator_controls_s::INDEX_PITCH];
 
 		// roll
@@ -352,7 +392,7 @@ void Kite::fill_actuator_outputs()
 	}
 	else {
 		// pitch
-		_actuators_out_1->control[actuator_controls_s::INDEX_PITCH] = 1 - elevator_correction()
+		_actuators_out_1->control[actuator_controls_s::INDEX_PITCH] = 0.7f - elevator_correction()
 			+ 0.5f * _actuators_fw_in->control[actuator_controls_s::INDEX_PITCH];
 
 		// roll
