@@ -2252,7 +2252,7 @@ MulticopterPositionControl::generate_attitude_setpoint(float dt)
 		_att_sp.roll_body = _manual.y * _params.man_roll_max;
 
 		/* Enable static pitch control when AUX1 is enabled (above 0) by KiteX */
-		if (manual.aux1 > 0.0f) {
+		if (_manual.aux1 > 0.0f) {
 			_att_sp.pitch_body = _params.pitch_hvr;
 		} else {
 			_att_sp.pitch_body = -_manual.x * _params.man_pitch_max;
@@ -2399,7 +2399,7 @@ MulticopterPositionControl::task_main()
 
 		/* reset yaw setpoint while AUX1 is high Added by Andreas
 		for manual tetheted flight */
-		if (_params.tet_pos_ctl > 0.5f || manual.aux1 > 0.0f) {
+		if (_params.tet_pos_ctl > 0.5f || _manual.aux1 > 0.0f) {
 			_reset_yaw_sp = true;
 		}
 

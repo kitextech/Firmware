@@ -118,12 +118,12 @@ private:
 	/**
 	 * set initial values before transitioning.
 	 */
-	void set_transition_starting_values();
+	void set_transition_starting_values(bool forward);
 
 	/**
 	* calculate the elevator correction
 	*/
-	float elevatorCorrection();
+	float elevator_correction();
 
 	/**
 	 * Update parameters.
@@ -134,5 +134,11 @@ private:
 	 * Update transition ratio based on time passed since start.
 	 */
 	void update_transition_ratio();
+
+	/**
+	* update external VTOL state
+	*/
+	void update_external_VTOL_state();
+
 };
 #endif
