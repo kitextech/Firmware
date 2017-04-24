@@ -5,7 +5,7 @@ This file defines a single mixer for the kiteX V4 prototype with motors in X con
 and one servo for each the rudder and elevator.
 are mixed 100%.
 
-R: 4x 10000 10000 10000 0
+R: 4kitex 10000 10000 10000 0
 
 M: 1
 O:      -10000  -10000      0 -8000  8000
