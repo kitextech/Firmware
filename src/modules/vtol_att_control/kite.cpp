@@ -377,7 +377,7 @@ void Kite::fill_actuator_outputs()
 	// pitch
 	_actuators_out_1->control[actuator_controls_s::INDEX_PITCH] = 0.6f
 	- elevator_correction()
-	- _actuators_fw_in->control[actuator_controls_s::INDEX_PITCH];
+	+ _actuators_fw_in->control[actuator_controls_s::INDEX_PITCH];
 
 	// roll
 	_actuators_out_1->control[actuator_controls_s::INDEX_ROLL] =
