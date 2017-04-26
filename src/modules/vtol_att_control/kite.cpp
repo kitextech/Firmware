@@ -48,7 +48,8 @@ Kite::Kite(VtolAttitudeControl *attc) :
 	_pitch_transition_start(0.0f),
 	_thrust_transition_start(0.0f),
 	_speed(0.0f),
-	_airspeed_ratio(0.0f)
+	_airspeed_ratio(0.0f),
+	_fail_safe_hover(false)
 {
 	_vtol_schedule.flight_mode = MC_MODE;
 	_vtol_schedule.transition_start = 0;
@@ -124,11 +125,12 @@ void Kite::update_vtol_state()
 
 	_airspeed_ratio = _speed/_params_kite.airspeed_trans; // use _airspeed->indicated_airspeed_m_s
 
+	_fail_safe_hover = (_manual_control_sp->aux2 > 0.5f ||
+		(_local_pos->z > -10 && _manual_control_sp->aux3 > 0.5f) );
+
 	// SAFETY SWITCH go directly to MC mode
-	if (_manual_control_sp->aux2 > 0.5f) {
+	if (_fail_safe_hover) {
 		_vtol_schedule.flight_mode = MC_MODE;
-
-
 	} else if (_attc->is_fixed_wing_requested()) { // switchig to FW mode
 		switch (_vtol_schedule.flight_mode) {
 		case MC_MODE:
@@ -224,11 +226,6 @@ void Kite::update_transition_state()
 	}
 	else if (_vtol_schedule.flight_mode == TRANSITION_BACK) {
 
-		// if (!flag_idle_mc) {
-		// 	set_idle_mc();
-		// 	flag_idle_mc = true;
-		// }
-
 		/** create time dependant pitch angle set point + 0.2 rad overlap over the switch value*/
 		_v_att_sp->roll_body = (1.0f - t)*_roll_transition_start + t*_params_kite.trans_backwards_roll;
 		_v_att_sp->pitch_body = (1.0f - t)*_pitch_transition_start + t*_params_kite.trans_backwards_pitch;
@@ -282,24 +279,18 @@ void Kite::update_mc_state()
 	_mc_yaw_weight = 1;
 	_mc_pitch_weight = 1;
 
-	// SAFETY SWITCH
-	if (_manual_control_sp->aux2 > 0.5f) {
+	// SAFETY MODE
+	if (_fail_safe_hover) {
 
 		_v_att_sp->roll_body = 0;
 		_v_att_sp->pitch_body = 0;
 		_v_att_sp->yaw_body = _yaw_transition_start;
-		_v_att_sp->thrust = 0.6;
+		_v_att_sp->thrust = 0.7;
 
 		math::Quaternion q_sp;
 		q_sp.from_euler(_v_att_sp->roll_body, _v_att_sp->pitch_body, _v_att_sp->yaw_body);
 		memcpy(&_v_att_sp->q_d[0], &q_sp.data[0], sizeof(_v_att_sp->q_d));
 	}
-
-	// // set idle speed for rotary wing mode
-	// if (!flag_idle_mc) {
-	// 	set_idle_mc();
-	// 	flag_idle_mc = true;
-	// }
 }
 
 void Kite::update_fw_state()
@@ -309,12 +300,6 @@ void Kite::update_fw_state()
 	_mc_roll_weight = 0.0f;
 	_mc_yaw_weight = 0.0f;
 	_mc_pitch_weight = 0.0f;
-
-
-	// if (flag_idle_mc) {
-	// 	set_idle_fw();
-	// 	flag_idle_mc = false;
-	// }
 }
 
 float Kite::elevator_correction()
@@ -331,7 +316,7 @@ void Kite::fill_actuator_outputs()
 	_actuators_out_0->timestamp = _actuators_mc_in->timestamp;
 
 	// SAFETY SWITCH
-	if (_manual_control_sp->aux2 > 0.5f) {
+	if (_fail_safe_hover) {
 		// roll
 		_actuators_out_0->control[actuator_controls_s::INDEX_ROLL] =
 			_actuators_mc_in->control[actuator_controls_s::INDEX_ROLL];

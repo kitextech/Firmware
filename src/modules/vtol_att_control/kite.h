@@ -115,6 +115,9 @@ private:
 
 	float _transition_ratio;
 
+	bool _fail_safe_hover;
+
+
 	/**
 	 * set initial values before transitioning.
 	 */
