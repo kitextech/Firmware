@@ -73,6 +73,7 @@ private:
 		float trans_backwards_roll;
 		float trans_backwards_thrust;
 		float wind_speed;
+		math::Vector<3> pos_b;
 
 	} _params_kite;
 
@@ -86,6 +87,10 @@ private:
 		param_t trans_backwards_roll;
 		param_t trans_backwards_thrust;
 		param_t wind_speed;
+		param_t x_pos_b;
+		param_t y_pos_b;
+		param_t z_pos_b;
+
 	} _params_handles_kite;
 
 	// vtol mode specific for the kite
