@@ -231,12 +231,12 @@ void Kite::update_transition_state()
 	math::Vector<3> rp = _pos - _params_kite.pos_b; // param doesnt exist yet
 	// math::Vector<3> wind(0,0,4); // need to be a parameter
 
-	float heading = atan2f(rp(0), rp(1))
+	float heading = atan2f(rp(1), rp(0))
 
 	if (_vtol_schedule.flight_mode == TRANSITION_FRONT) {
 
 		float headingCorrected = heading - math::constrain(_airspeed_ratio * _airspeed_ratio, 0.0f, 1.0f) * atan2f(_params_kite.wind_speed, _speed);
-		float pitchGoal = - atan2f(rp(2), sqrt(rp(0) * rp(0) * rp(1) * rp(1) ))
+		float pitchGoal = atan2f(- rp(2), sqrt(rp(0) * rp(0) * rp(1) * rp(1) ))
 		float pitch = (1.0f - t)*_pitch_transition_start + t*pitchGoal;
 		float roll = (1.0f - t)*_roll_transition_start + t*_params_kite.trans_forward_roll;
 
@@ -247,8 +247,8 @@ void Kite::update_transition_state()
 		// _v_att_sp->pitch_body = (1.0f - t)*_pitch_transition_start + t*_params_kite.trans_forward_pitch;
 
 		_v_att_sp->yaw_body = headingCorrected; //_yaw_transition_start;
-		_v_att_sp->roll_body = pitch;
-		_v_att_sp->pitch_body = roll;
+		_v_att_sp->roll_body = roll;
+		_v_att_sp->pitch_body = pitch;
 		_v_att_sp->thrust = (1.0f - t)*_thrust_transition_start + t*_params_kite.trans_forward_thrust;
 
 	}
