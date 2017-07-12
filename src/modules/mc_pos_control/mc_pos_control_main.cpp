@@ -342,6 +342,9 @@ private:
 	float signed_angle(const math::Vector<2> &left, const math::Vector<2> &right);
 	float square_distance_to_path(const int path_i);
 
+	// KiteX helper
+	void reset_b();
+
 	/**
 	 * Update our local parameter cache.
 	 */
@@ -623,6 +626,12 @@ MulticopterPositionControl::~MulticopterPositionControl()
 	}
 
 	pos_control::g_control = nullptr;
+}
+
+void
+MulticopterPositionControl::reset_b()
+{
+
 }
 
 int

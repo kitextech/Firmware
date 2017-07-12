@@ -66,6 +66,8 @@ Kite::Kite(VtolAttitudeControl *attc) :
 	_params_handles_kite.x_pos_b		= param_find("MPC_X_POS_B"); // from MC_POS_CONTROL
 	_params_handles_kite.y_pos_b		= param_find("MPC_Y_POS_B");
 	_params_handles_kite.z_pos_b		= param_find("MPC_Y_POS_B");
+
+	printf("START KITE");
 }
 
 Kite::~Kite()
@@ -105,13 +107,14 @@ Kite::parameters_update()
 	param_get(_params_handles_kite.wind_speed, &f);
 	_params_kite.wind_speed = f;
 
-	param_get(_params_handles.x_pos_b, &v);
-	_params_kite.pos_b(0) = v;
-	param_get(_params_handles.y_pos_b, &v);
-	_params_kite.pos_b(1) = v;
-	param_get(_params_handles.z_pos_b, &v);
-	_params_kite.pos_b(2) = v;
+	param_get(_params_handles_kite.x_pos_b, &f);
+	_params_kite.pos_b(0) = f;
+	param_get(_params_handles_kite.y_pos_b, &f);
+	_params_kite.pos_b(1) = f;
+	param_get(_params_handles_kite.z_pos_b, &f);
+	_params_kite.pos_b(2) = f;
 
+	printf("UODATE KITE bx: %.2f, by: %.2f, bz: %.2f\n", (double) _params_kite.pos_b(0), (double) _params_kite.pos_b(1), (double) _params_kite.pos_b(2));
 }
 
 void Kite::update_vtol_state()
@@ -227,16 +230,21 @@ void Kite::update_external_VTOL_state()
 void Kite::update_transition_state()
 {
 	float t = math::constrain(_transition_ratio, 0.0f, 1.0f);
+	math::Vector<3> rp;
+	rp.zero();
 
-	math::Vector<3> rp = _pos - _params_kite.pos_b; // param doesnt exist yet
+	rp(0) = _local_pos->x - _params_kite.pos_b(0);
+	rp(1) = _local_pos->y - _params_kite.pos_b(1);
+	rp(2) = _local_pos->z - _params_kite.pos_b(1);
+
 	// math::Vector<3> wind(0,0,4); // need to be a parameter
 
-	float heading = atan2f(rp(1), rp(0))
+	float heading = atan2f(rp(1), rp(0));
 
 	if (_vtol_schedule.flight_mode == TRANSITION_FRONT) {
 
 		float headingCorrected = heading - math::constrain(_airspeed_ratio * _airspeed_ratio, 0.0f, 1.0f) * atan2f(_params_kite.wind_speed, _speed);
-		float pitchGoal = atan2f(- rp(2), sqrt(rp(0) * rp(0) * rp(1) * rp(1) ))
+		float pitchGoal = atan2f(- rp(2), sqrt(rp(0) * rp(0) * rp(1) * rp(1)));
 		float pitch = (1.0f - t)*_pitch_transition_start + t*pitchGoal;
 		float roll = (1.0f - t)*_roll_transition_start + t*_params_kite.trans_forward_roll;
 
