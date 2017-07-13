@@ -544,7 +544,7 @@ _heading_reset_counter(0)
 
 	_params_handles.x_pos_b		= param_find("MPC_X_POS_B");
 	_params_handles.y_pos_b		= param_find("MPC_Y_POS_B");
-	_params_handles.z_pos_b		= param_find("MPC_Y_POS_B");
+	_params_handles.z_pos_b		= param_find("MPC_Z_POS_B");
 
 	_params_handles.tether_len	= param_find("MPC_TETHER_LEN");
 

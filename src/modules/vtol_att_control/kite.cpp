@@ -65,7 +65,7 @@ Kite::Kite(VtolAttitudeControl *attc) :
 	_params_handles_kite.wind_speed = param_find("VT_WIND_SPEED");
 	_params_handles_kite.x_pos_b		= param_find("MPC_X_POS_B"); // from MC_POS_CONTROL
 	_params_handles_kite.y_pos_b		= param_find("MPC_Y_POS_B");
-	_params_handles_kite.z_pos_b		= param_find("MPC_Y_POS_B");
+	_params_handles_kite.z_pos_b		= param_find("MPC_Z_POS_B");
 
 	printf("START KITE");
 }
