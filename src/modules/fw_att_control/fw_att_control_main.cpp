@@ -73,6 +73,9 @@
 using matrix::Eulerf;
 using matrix::Quatf;
 
+#define _USE_MATH_DEFINES
+
+
 /**
  * Fixedwing attitude control app start / stop handling function
  *
@@ -156,6 +159,10 @@ private:
 
 
 	struct {
+		float phiC;
+		float thetaC;
+		float turning_radius;
+
 		float p_tc;
 		float p_p;
 		float p_i;
@@ -216,6 +223,9 @@ private:
 	}		_parameters;			/**< local copies of interesting parameters */
 
 	struct {
+		param_t phiC;
+		param_t thetaC;
+		param_t turning_radius;
 
 		param_t p_tc;
 		param_t p_p;
@@ -274,6 +284,22 @@ private:
 
 	}		_parameter_handles;		/**< handles for interesting parameters */
 
+	// path following
+	math::Vector<3> pos_c;
+	math::Vector<3> e_pi_x;
+	math::Vector<3> e_pi_y;
+
+	float _pi_path_x[60]; // KiteX: x-coords of path points
+	float _pi_path_y[60]; // KiteX: y-coords of path points
+	int _pi_path_i = 0; // KiteX: Path of kite in Pi plane
+
+	math::Vector<2> _dir_pi; // KiteX: Projected direction vector in Pi
+	math::Vector<2> _pos_pi; // KiteX: Projected position in Pi
+	math::Vector<2> _target_point_pi; // KiteX: Target point on path
+	float _arc_radius = 100000000.0f; // KiteX: Radius of path
+	float _arc_angle = 0.0f; // KiteX: Radius of path
+	float _arc_roll_rate = 0.0f; // KiteX: Yaw rate to reach path
+
 	// Rotation matrix and euler angles to extract from control state
 	math::Matrix<3, 3> _R;
 	float _roll;
@@ -284,6 +310,22 @@ private:
 	ECL_PitchController				_pitch_ctrl;
 	ECL_YawController				_yaw_ctrl;
 	ECL_WheelController			_wheel_ctrl;
+
+
+	// KiteX
+void update_pi(float phi, float theta);
+void update_pi_path(float radius);
+void update_pi_projection();
+void update_pi_target_point(float search_radius);
+void update_pi_arc();
+void update_pi_roll_rate();
+
+void control_looping(float dt);
+
+
+// KiteX pure helpers
+float signed_angle(const math::Vector<2> &left, const math::Vector<2> &right);
+float square_distance_to_path(const int path_i);
 
 
 	/**
@@ -407,6 +449,17 @@ FixedwingAttitudeControl::FixedwingAttitudeControl() :
 	_vehicle_land_detected = {};
 	_vehicle_status = {};
 
+	_dir_pi.zero();
+	_pos_pi.zero();
+
+	_parameters.pos_c.zero(); // is this needed
+	_parameters.e_pi_x.zero();
+	_parameters.e_pi_y.zero();
+
+	_parameter_handles.phiC						= param_find("MPC_PHI_C");
+	_parameter_handles.thetaC				 	= param_find("MPC_THETA_C");
+	_parameter_handles.turning_radius	= param_find("MPC_LOOP_TURN_R");
+
 	_parameter_handles.p_tc = param_find("FW_P_TC");
 	_parameter_handles.p_p = param_find("FW_PR_P");
 	_parameter_handles.p_i = param_find("FW_PR_I");
@@ -504,6 +557,11 @@ int
 FixedwingAttitudeControl::parameters_update()
 {
 
+	/* KiteX: Controlling C for looping */
+	param_get(_params_handles.phiC, &_params.phiC);
+	param_get(_params_handles.thetaC, &_params.thetaC);
+	param_get(_params_handles.turning_radius, &_params.turning_radius);
+
 	param_get(_parameter_handles.p_tc, &(_parameters.p_tc));
 	param_get(_parameter_handles.p_p, &(_parameters.p_p));
 	param_get(_parameter_handles.p_i, &(_parameters.p_i));
@@ -569,6 +627,18 @@ FixedwingAttitudeControl::parameters_update()
 	param_get(_parameter_handles.vtol_type, &_parameters.vtol_type);
 
 	param_get(_parameter_handles.bat_scale_en, &_parameters.bat_scale_en);
+
+	/* KiteX calculate C - not really needed */
+	//		float d	= calculate_d(_params.tether_len, _params.turning_radius);
+	//		_params.pos_c = calculate_vector(_params.phiC, _params.thetaC, d) + _params.pos_b;
+
+	//		_params.e_pi_x = calculate_e_pi_x(_params.phiC, _params.thetaC);
+	//		_params.e_pi_y = calculate_e_pi_y(_params.phiC, _params.thetaC);
+
+	// KiteX: Update projection plane and path
+	update_pi(_params.phiC, _params.thetaC);
+	update_pi_path(_params.turning_radius);
+
 
 	/* pitch control parameters */
 	_pitch_ctrl.set_time_constant(_parameters.p_tc);
@@ -708,6 +778,17 @@ FixedwingAttitudeControl::battery_status_poll()
 		orb_copy(ORB_ID(battery_status), _battery_status_sub, &_battery_status);
 	}
 }
+
+// KiteX: This is run when in a loop
+void FixedwingAttitudeControl::control_looping(float dt)
+{
+	update_pi_projection();
+	update_pi_target_point(0.4*_params.turning_radius);
+	update_pi_arc();
+	update_pi_roll_rate();
+}
+
+
 
 void
 FixedwingAttitudeControl::task_main_trampoline(int argc, char *argv[])
@@ -1359,3 +1440,160 @@ int fw_att_control_main(int argc, char *argv[])
 	warnx("unrecognized command");
 	return 1;
 }
+
+
+// KiteX functions
+
+/*
+	TODO:
+
+	-Bonus
+	Make unit sized path and multiply radius JIT
+	Make path an array of vectors
+	Make faster signed_angle with atan
+*/
+
+// Impure versions
+
+// KiteX: Run when the angles for C change
+void MulticopterPositionControl::update_pi(float phi, float theta)
+{
+	_params.e_pi_x(0) = sinf(phi);
+	_params.e_pi_x(1) = -cosf(phi);
+	_params.e_pi_x(2) = 0;
+
+	_params.e_pi_y(0) = -sinf(phi)*sinf(theta);
+	_params.e_pi_y(1) = -cosf(phi)*sinf(theta);
+	_params.e_pi_y(2) = -cosf(theta);
+}
+
+// KiteX: Run when the turning radius changes
+void MulticopterPositionControl::update_pi_path(float radius)
+{
+	for (int i = 0; i < 60; i++) {
+		float phi = i*2*M_PI/60;
+		_pi_path_x[i] = radius*cosf(phi);
+		_pi_path_y[i] = radius*sinf(phi);
+	}
+}
+
+// KiteX: Run when position changes
+void MulticopterPositionControl::update_pi_projection()
+{
+	math::Vector<3> relative_pos = _pos - _params.pos_b;
+	_pos_pi(0) = relative_pos*_params.e_pi_x;
+	_pos_pi(1) = relative_pos*_params.e_pi_y;
+
+	math::Vector<3> direction = _vel.normalized();
+	_dir_pi(0) = direction*_params.e_pi_x;
+	_dir_pi(1) = direction*_params.e_pi_y;
+}
+
+void MulticopterPositionControl::update_pi_target_point(float search_radius)
+{
+	int index = _pi_path_i;
+	float radius = search_radius;
+
+	while ((double) square_distance_to_path(index) < pow(radius, 2)) {
+		index = index + 1 % 60;
+
+		if (index == _pi_path_i) {
+			radius = 0.75f*radius; // Decrease the search radius until it works
+		}
+	}
+
+	_pi_path_i = index;
+	_target_point_pi(0) = _pi_path_x[_pi_path_i];
+	_target_point_pi(1) = _pi_path_y[_pi_path_i];
+}
+
+void MulticopterPositionControl::update_pi_arc()
+{
+	math::Vector<2> delta_pos = _target_point_pi - _pos_pi;
+	_arc_angle = signed_angle(_dir_pi, delta_pos);
+	float factor = 1/sqrtf(2*(1 - cosf(2*_arc_angle)));
+	_arc_radius = factor*delta_pos.length();
+}
+
+void MulticopterPositionControl::update_pi_roll_rate()
+{
+	_arc_roll_rate = copysignf(1.0f, _arc_angle)*_vel.length()/_arc_radius;
+}
+
+// KiteX: Pure helper functions
+
+float MulticopterPositionControl::signed_angle(const math::Vector<2> &left, const math::Vector<2> &right)
+{
+	const math::Vector<2> l = left.normalized();
+	const math::Vector<2> r = right.normalized();
+
+	float s_angle = asin(l % r);
+
+	if (acos(l*r) > M_PI_2) {
+			if (s_angle > 0) {
+					return ((float) M_PI) - s_angle;
+			}
+			else {
+					return -((float) M_PI) - s_angle;
+			}
+	}
+	else {
+			return s_angle;
+	}
+}
+
+float MulticopterPositionControl::square_distance_to_path(const int path_i)
+{
+	return pow(_pos_pi(0) - _pi_path_x[path_i], 2) + pow(_pos_pi(1) - _pi_path_y[path_i], 2);
+}
+
+/*
+// Pure versions, not used currently
+const math::Vector<3> calculate_e_pi_x(float phi_n, float theta_n)
+{
+	math::Vector<3> result;
+	result(0) = sinf(phi);
+	result(1) = -cosf(phi);
+	result(2) = 0;
+
+	return result;
+}
+
+const math::Vector<3> calculate_e_pi_y(float phi_n, float theta_n)
+{
+	float xyFactor = sinf(theta);
+
+	math::Vector<3> result;
+	result(0) = -sinf(phi)*sinf(theta);
+	result(1) = -cosf(phi)*sinf(theta);
+	result(2) = -cosf(theta_n);
+
+	return result;
+}
+
+const math::Vector<2> project(const math::Vector<3> &vector, const math::Vector<3> &e_x, const math::Vector<3> &e_y)
+{
+	math::Vector<2> result;
+	result(0) = vector*e_x;
+	result(1) = vector*e_y;
+
+	return result;
+}
+
+float calculate_d(const float tetherLength, const float turningRadius)
+{
+	pow(tetherLength, 2) - pow(turningRadius, 2);
+}
+
+const math::Vector<3> calculate_vector(const float phi, const float theta, const float d)
+{
+	float xyFactor = d*cosf(theta);
+	math::Vector<3> result;
+
+	result(0) = xyFactor*cosf(phi);
+	result(1) = xyFactor*sinf(phi);
+	result(2) = -d*sinf(theta);
+
+	return result;
+}
+*/
