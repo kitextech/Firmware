@@ -41,23 +41,23 @@
  */
 
 
-
- /**
- * Angles to C. Phi is relative to the X-axis, theta to the XY-plane, positive for negative z.
- * *
- * @group Multicopter Position Control
- */
-
- PARAM_DEFINE_FLOAT(MPC_PHI_C, 0.0f);
- PARAM_DEFINE_FLOAT(MPC_THETA_C, 0.0f);
-
- /**
-  * Turning radius in the Pi-plane
-  * *
-  * @group Multicopter Position Control
-  */
-
- PARAM_DEFINE_FLOAT(MPC_LOOP_TURN_R, 0.0f);
+// ALSO DEFINED IN mc_pos_control_main
+ // /**
+ // * Angles to C. Phi is relative to the X-axis, theta to the XY-plane, positive for negative z.
+ // * *
+ // * @group Multicopter Position Control
+ // */
+ //
+ // PARAM_DEFINE_FLOAT(MPC_PHI_C, 0.0f);
+ // PARAM_DEFINE_FLOAT(MPC_THETA_C, 0.0f);
+ //
+ // /**
+ //  * Turning radius in the Pi-plane
+ //  * *
+ //  * @group Multicopter Position Control
+ //  */
+ //
+ // PARAM_DEFINE_FLOAT(MPC_LOOP_TURN_R, 0.0f);
 
 
 
