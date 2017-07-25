@@ -306,11 +306,10 @@ private:
 	float _pi_path_y[60]; // KiteX: y-coords of path points
 	int _pi_path_i = 0; // KiteX: Path of kite in Pi plane
 
-	math::Vector<2> _dir_pi; // KiteX: Projected direction vector in Pi
 	math::Vector<2> _pos_pi; // KiteX: Projected position in Pi
+	math::Vector<2> _vel_pi; // KiteX: Projected velocity vector in Pi
 	math::Vector<2> _target_point_pi; // KiteX: Target point on path
 	float _arc_radius = 100000000.0f; // KiteX: Radius of path
-	float _arc_angle = 0.0f; // KiteX: Radius of path
 	float _arc_roll_rate = 0.0f; // KiteX: Yaw rate to reach path
 
 	// Rotation matrix and euler angles to extract from control state
@@ -467,7 +466,7 @@ FixedwingAttitudeControl::FixedwingAttitudeControl() :
 	_vehicle_land_detected = {};
 	_vehicle_status = {};
 
-	_dir_pi.zero();
+	_vel_pi.zero();
 	_pos_pi.zero();
 
 	_parameters.pos_c.zero(); // is this needed
@@ -835,12 +834,10 @@ FixedwingAttitudeControl::battery_status_poll()
 void FixedwingAttitudeControl::control_looping(float dt)
 {
 	update_pi_projection();
-	update_pi_target_point(0.4f * _parameters.turning_radius);
+	update_pi_target_point(0.8f * _parameters.turning_radius);
 	update_pi_arc();
 	update_pi_roll_rate();
 }
-
-
 
 void
 FixedwingAttitudeControl::task_main_trampoline(int argc, char *argv[])
@@ -1084,11 +1081,14 @@ FixedwingAttitudeControl::task_main()
 			// }
 
 			// KITEX
-			bool manual_overwrite = false;
-			if (fabsf(_manual.y) > 0.2f ||
-					fabsf(_manual.x) > 0.2f) {
-				manual_overwrite = true;
-			}
+//			bool manual_overwrite = false;
+//			if (fabsf(_manual.y) > 0.2f ||
+//					fabsf(_manual.x) > 0.2f) {
+//				manual_overwrite = true;
+//			}
+
+			// Isn't this the same thing?
+			bool manual_overwrite = fabsf(_manual.y) > 0.2f || fabsf(_manual.x) > 0.2f);
 
 			/* decide if in stabilized or full manual control */
 			if (!manual_overwrite) {
@@ -1315,7 +1315,10 @@ FixedwingAttitudeControl::task_main()
 				// } else {
 					// pure rate control
 
-					_roll_ctrl.set_bodyrate_setpoint( _arc_roll_rate ); // _manual.y * _parameters.acro_max_x_rate_rad
+					// Don't we need to do this?
+					// control_input.roll_rate_setpoint = _arc_roll_rate;
+
+					_roll_ctrl.set_bodyrate_setpoint(_arc_roll_rate); // _manual.y * _parameters.acro_max_x_rate_rad
 					_pitch_ctrl.set_bodyrate_setpoint(0); // -_manual.x * _parameters.acro_max_y_rate_rad
 					_yaw_ctrl.set_bodyrate_setpoint(0);
 
@@ -1549,9 +1552,8 @@ void FixedwingAttitudeControl::update_pi_projection()
 	_pos_pi(0) = relative_pos*_parameters.e_pi_x;
 	_pos_pi(1) = relative_pos*_parameters.e_pi_y;
 
-	math::Vector<3> direction = _vel.normalized();
-	_dir_pi(0) = direction*_parameters.e_pi_x;
-	_dir_pi(1) = direction*_parameters.e_pi_y;
+	_vel_pi(0) = _vel*_parameters.e_pi_x;
+	_vel_pi(1) = _vel*_parameters.e_pi_y;
 }
 
 void FixedwingAttitudeControl::update_pi_target_point(float search_radius)
@@ -1561,10 +1563,6 @@ void FixedwingAttitudeControl::update_pi_target_point(float search_radius)
 
 	while ((double) square_distance_to_path(index) < pow(radius, 2)) {
 		index = index + 1 % 60;
-
-		if (index == _pi_path_i) {
-			radius = 0.75f*radius; // Decrease the search radius until it works
-		}
 	}
 
 	_pi_path_i = index;
@@ -1575,19 +1573,30 @@ void FixedwingAttitudeControl::update_pi_target_point(float search_radius)
 void FixedwingAttitudeControl::update_pi_arc()
 {
 	math::Vector<2> delta_pos = _target_point_pi - _pos_pi;
-	_arc_angle = signed_angle(_dir_pi, delta_pos);
+	float _arc_angle = signed_angle(_vel_pi, delta_pos);
 	float factor = 1/sqrtf(2*(1 - cosf(2*_arc_angle)));
-	_arc_radius = factor*delta_pos.length();
+	_arc_radius = copysignf(1.0f, _arc_angle)*factor*delta_pos.length();
 }
 
 void FixedwingAttitudeControl::update_pi_roll_rate()
 {
-	_arc_roll_rate = copysignf(1.0f, _arc_angle)*_vel.length()/_arc_radius;
+	//_arc_roll_rate = _vel.length()/_arc_radius;
+	_arc_roll_rate = _vel_pi.length()/_arc_radius;
 }
 
 // KiteX: Pure helper functions
 
+// This should give the same result with fewer calculations
 float FixedwingAttitudeControl::signed_angle(const math::Vector<2> &left, const math::Vector<2> &right)
+{
+	const math::Vector<2> e_x = left.normalized();
+	const math::Vector<2> e_y(-e_x(1), e_x(0));
+
+	return atan2f(right*e_x, right*e_y);
+}
+
+// Keeping this so we can test if they are equal. Already tested in Swift.
+float FixedwingAttitudeControl::signed_angle_OLD(const math::Vector<2> &left, const math::Vector<2> &right)
 {
 	const math::Vector<2> l = left.normalized();
 	const math::Vector<2> r = right.normalized();
