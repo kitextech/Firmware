@@ -1081,13 +1081,6 @@ FixedwingAttitudeControl::task_main()
 			// }
 
 			// KITEX
-//			bool manual_overwrite = false;
-//			if (fabsf(_manual.y) > 0.2f ||
-//					fabsf(_manual.x) > 0.2f) {
-//				manual_overwrite = true;
-//			}
-
-			// Isn't this the same thing?
 			bool manual_overwrite = fabsf(_manual.y) > 0.2f || fabsf(_manual.x) > 0.2f);
 
 			/* decide if in stabilized or full manual control */
@@ -1319,18 +1312,20 @@ FixedwingAttitudeControl::task_main()
 					// control_input.roll_rate_setpoint = _arc_roll_rate;
 
 					_roll_ctrl.set_bodyrate_setpoint(_arc_roll_rate); // _manual.y * _parameters.acro_max_x_rate_rad
-					_pitch_ctrl.set_bodyrate_setpoint(0); // -_manual.x * _parameters.acro_max_y_rate_rad
-					_yaw_ctrl.set_bodyrate_setpoint(0);
+					// _pitch_ctrl.set_bodyrate_setpoint(0); // -_manual.x * _parameters.acro_max_y_rate_rad
+					// _yaw_ctrl.set_bodyrate_setpoint(0);
 
 					float roll_u = _roll_ctrl.control_bodyrate(control_input);
 					_actuators.control[actuator_controls_s::INDEX_ROLL] = (PX4_ISFINITE(roll_u)) ? roll_u + _parameters.trim_roll :
 							_parameters.trim_roll;
 
-					float pitch_u = _pitch_ctrl.control_bodyrate(control_input);
+					// float pitch_u = _pitch_ctrl.control_bodyrate(control_input);
+					float pitch_u = 0;
 					_actuators.control[actuator_controls_s::INDEX_PITCH] = (PX4_ISFINITE(pitch_u)) ? pitch_u + _parameters.trim_pitch :
 							_parameters.trim_pitch;
 
-					float yaw_u = _yaw_ctrl.control_bodyrate(control_input);
+					// float yaw_u = _yaw_ctrl.control_bodyrate(control_input);
+					float yaw_u = 0;
 					_actuators.control[actuator_controls_s::INDEX_YAW] = (PX4_ISFINITE(yaw_u)) ? yaw_u + _parameters.trim_yaw :
 							_parameters.trim_yaw;
 
