@@ -764,6 +764,8 @@ FixedwingAttitudeControl::local_pos_poll()
 		_vel(0) = _local_pos.vx;
 		_vel(1) = _local_pos.vy;
 		_vel(2) = _local_pos.vz;
+
+		// printf("%.2f, %.2f, %.2f, %.2f, %.2f, %.2f\n", (double) _pos(0), (double) _pos(1), (double) _pos(2), (double) _vel(0), (double) _vel(1), (double) _vel(2));
 	}
 }
 
@@ -837,6 +839,7 @@ void FixedwingAttitudeControl::control_looping(float dt)
 	update_pi_target_point(0.8f * _parameters.turning_radius);
 	update_pi_arc();
 	update_pi_roll_rate();
+	// printf("_arc_radius: %.3f \n", (double) _arc_radius);
 }
 
 void
@@ -856,6 +859,7 @@ FixedwingAttitudeControl::task_main()
 	_vcontrol_mode_sub = orb_subscribe(ORB_ID(vehicle_control_mode));
 	_params_sub = orb_subscribe(ORB_ID(parameter_update));
 	_manual_sub = orb_subscribe(ORB_ID(manual_control_setpoint));
+	_local_pos_sub = orb_subscribe(ORB_ID(vehicle_local_position));
 	_global_pos_sub = orb_subscribe(ORB_ID(vehicle_global_position));
 	_vehicle_status_sub = orb_subscribe(ORB_ID(vehicle_status));
 	_vehicle_land_detected_sub = orb_subscribe(ORB_ID(vehicle_land_detected));
@@ -1081,7 +1085,7 @@ FixedwingAttitudeControl::task_main()
 			// }
 
 			// KITEX
-			bool manual_overwrite = fabsf(_manual.y) > 0.2f || fabsf(_manual.x) > 0.2f);
+			bool manual_overwrite = fabsf(_manual.y) > 0.2f || fabsf(_manual.x) > 0.2f;
 
 			/* decide if in stabilized or full manual control */
 			if (!manual_overwrite) {
@@ -1126,7 +1130,7 @@ FixedwingAttitudeControl::task_main()
 				float pitch_sp = _parameters.pitchsp_offset_rad;
 				float yaw_sp = 0.0f;
 				// float yaw_manual = 0.0f;
-				float throttle_sp = 0.0f;
+				// float throttle_sp = 0.0f;
 
 				// // in STABILIZED mode we need to generate the attitude setpoint
 				// // from manual user inputs
@@ -1152,7 +1156,7 @@ FixedwingAttitudeControl::task_main()
 				roll_sp = _att_sp.roll_body;
 				pitch_sp = _att_sp.pitch_body;
 				yaw_sp = _att_sp.yaw_body;
-				throttle_sp = _att_sp.thrust;
+				// throttle_sp = _att_sp.thrust;
 
 				// /* allow manual yaw in manual modes */
 				// if (_vcontrol_mode.flag_control_manual_enabled) {
@@ -1329,10 +1333,11 @@ FixedwingAttitudeControl::task_main()
 					_actuators.control[actuator_controls_s::INDEX_YAW] = (PX4_ISFINITE(yaw_u)) ? yaw_u + _parameters.trim_yaw :
 							_parameters.trim_yaw;
 
-					_actuators.control[actuator_controls_s::INDEX_THROTTLE] = (PX4_ISFINITE(throttle_sp) &&
-							//!(_vehicle_status.engine_failure ||
-							!_vehicle_status.engine_failure_cmd) ?
-							throttle_sp : 0.0f;
+					_actuators.control[actuator_controls_s::INDEX_THROTTLE] = _manual.z;
+							// (PX4_ISFINITE(throttle_sp) &&
+							// //!(_vehicle_status.engine_failure ||
+							// !_vehicle_status.engine_failure_cmd) ?
+							// throttle_sp : 0.0f;
 				// }
 
 				/*
@@ -1590,79 +1595,7 @@ float FixedwingAttitudeControl::signed_angle(const math::Vector<2> &left, const 
 	return atan2f(right*e_x, right*e_y);
 }
 
-// Keeping this so we can test if they are equal. Already tested in Swift.
-float FixedwingAttitudeControl::signed_angle_OLD(const math::Vector<2> &left, const math::Vector<2> &right)
-{
-	const math::Vector<2> l = left.normalized();
-	const math::Vector<2> r = right.normalized();
-
-	float s_angle = asin(l % r);
-
-	if (acos(l*r) > M_PI_2) {
-			if (s_angle > 0) {
-					return ((float) M_PI) - s_angle;
-			}
-			else {
-					return -((float) M_PI) - s_angle;
-			}
-	}
-	else {
-			return s_angle;
-	}
-}
-
 float FixedwingAttitudeControl::square_distance_to_path(const int path_i)
 {
 	return pow(_pos_pi(0) - _pi_path_x[path_i], 2) + pow(_pos_pi(1) - _pi_path_y[path_i], 2);
 }
-
-/*
-// Pure versions, not used currently
-const math::Vector<3> calculate_e_pi_x(float phi_n, float theta_n)
-{
-	math::Vector<3> result;
-	result(0) = sinf(phi);
-	result(1) = -cosf(phi);
-	result(2) = 0;
-
-	return result;
-}
-
-const math::Vector<3> calculate_e_pi_y(float phi_n, float theta_n)
-{
-	float xyFactor = sinf(theta);
-
-	math::Vector<3> result;
-	result(0) = -sinf(phi)*sinf(theta);
-	result(1) = -cosf(phi)*sinf(theta);
-	result(2) = -cosf(theta_n);
-
-	return result;
-}
-
-const math::Vector<2> project(const math::Vector<3> &vector, const math::Vector<3> &e_x, const math::Vector<3> &e_y)
-{
-	math::Vector<2> result;
-	result(0) = vector*e_x;
-	result(1) = vector*e_y;
-
-	return result;
-}
-
-float calculate_d(const float tetherLength, const float turningRadius)
-{
-	pow(tetherLength, 2) - pow(turningRadius, 2);
-}
-
-const math::Vector<3> calculate_vector(const float phi, const float theta, const float d)
-{
-	float xyFactor = d*cosf(theta);
-	math::Vector<3> result;
-
-	result(0) = xyFactor*cosf(phi);
-	result(1) = xyFactor*sinf(phi);
-	result(2) = -d*sinf(theta);
-
-	return result;
-}
-*/
