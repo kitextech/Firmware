@@ -66,8 +66,6 @@ Kite::Kite(VtolAttitudeControl *attc) :
 	_params_handles_kite.x_pos_b		= param_find("MPC_X_POS_B"); // from MC_POS_CONTROL
 	_params_handles_kite.y_pos_b		= param_find("MPC_Y_POS_B");
 	_params_handles_kite.z_pos_b		= param_find("MPC_Z_POS_B");
-
-	printf("START KITE");
 }
 
 Kite::~Kite()
@@ -268,7 +266,6 @@ void Kite::update_transition_state()
 		_v_att_sp->roll_body = (1.0f - t)*_roll_transition_start + t*_params_kite.trans_backwards_roll;
 		_v_att_sp->pitch_body = (1.0f - t)*_pitch_transition_start + t*_params_kite.trans_backwards_pitch;
 		_v_att_sp->thrust = (1.0f - t)*_thrust_transition_start + t*_params_kite.trans_backwards_thrust;
-
 	}
 
 	/** smoothly move control weight to MC */
