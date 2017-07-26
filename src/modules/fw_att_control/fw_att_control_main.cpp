@@ -1522,16 +1522,24 @@ int fw_att_control_main(int argc, char *argv[])
 */
 
 // Impure versions
+// _parameters.e_pi_x(0) = sinf(phi);
+// _parameters.e_pi_x(1) = -cosf(phi);
+// _parameters.e_pi_x(2) = 0;
+//
+// _parameters.e_pi_y(0) = -cosf(phi)*sinf(theta);
+// _parameters.e_pi_y(1) = -sinf(phi)*sinf(theta);
+// _parameters.e_pi_y(2) = -cosf(theta);
+
 
 // KiteX: Run when the angles for C change
 void FixedwingAttitudeControl::update_pi(float phi, float theta)
 {
-	_parameters.e_pi_x(0) = sinf(phi);
-	_parameters.e_pi_x(1) = -cosf(phi);
+	_parameters.e_pi_x(0) = -sinf(phi);
+	_parameters.e_pi_x(1) = cosf(phi);
 	_parameters.e_pi_x(2) = 0;
 
-	_parameters.e_pi_y(0) = -sinf(phi)*sinf(theta);
-	_parameters.e_pi_y(1) = -cosf(phi)*sinf(theta);
+	_parameters.e_pi_y(0) = -cosf(phi)*sinf(theta);
+	_parameters.e_pi_y(1) = -sinf(phi)*sinf(theta);
 	_parameters.e_pi_y(2) = -cosf(theta);
 }
 
@@ -1539,16 +1547,16 @@ void FixedwingAttitudeControl::update_pi(float phi, float theta)
 void FixedwingAttitudeControl::update_pi_path(float radius)
 {
 	for (int i = 0; i < 60; i++) {
-		float phi = i*2*M_PI/60;
-		_pi_path_x[i] = radius*cosf(phi);
-		_pi_path_y[i] = radius*sinf(phi);
+		float rho = i*2*M_PI/60;
+		_pi_path_x[i] = radius*cosf(rho + M_PI_2);
+		_pi_path_y[i] = -radius*sinf(rho + M_PI_2);
 	}
 }
 
 // KiteX: Run when position changes
 void FixedwingAttitudeControl::update_pi_projection()
 {
-	math::Vector<3> relative_pos = _pos - _parameters.pos_b;
+	math::Vector<3> relative_pos = _pos - _parameters.pos_b; // _parameters.pos_b should really be C, but it doesn't matter since B anc C is along PI (Z)
 	_pos_pi(0) = relative_pos*_parameters.e_pi_x;
 	_pos_pi(1) = relative_pos*_parameters.e_pi_y;
 
@@ -1559,10 +1567,9 @@ void FixedwingAttitudeControl::update_pi_projection()
 void FixedwingAttitudeControl::update_pi_target_point(float search_radius)
 {
 	int index = _pi_path_i;
-	float radius = search_radius;
 
-	while ((double) square_distance_to_path(index) < pow(radius, 2)) {
-		index = index + 1 % 60;
+	while ((double) square_distance_to_path(index) < pow(search_radius, 2)) {
+		index = (index + 1) % 60;
 	}
 
 	_pi_path_i = index;
@@ -1574,7 +1581,7 @@ void FixedwingAttitudeControl::update_pi_arc()
 {
 	math::Vector<2> delta_pos = _target_point_pi - _pos_pi;
 	float _arc_angle = signed_angle(_vel_pi, delta_pos);
-	float factor = 1/sqrtf(2*(1 - cosf(2*_arc_angle)));
+	float factor = 1/sqrtf(2*(1 - cosf(2*_arc_angle))); // Could use a simple sin function 
 	_arc_radius = copysignf(1.0f, _arc_angle)*factor*delta_pos.length();
 }
 

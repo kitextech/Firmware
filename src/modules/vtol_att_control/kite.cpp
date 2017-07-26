@@ -139,8 +139,9 @@ void Kite::update_vtol_state()
 
 	_airspeed_ratio = _speed/_params_kite.airspeed_trans; // use _airspeed->indicated_airspeed_m_s
 
-	_fail_safe_hover = (_manual_control_sp->aux2 > 0.5f ||
-		(_local_pos->z > -10 && _manual_control_sp->aux3 > 0.5f) );
+	// AUX2 = manual Failsafe, AUX3 = Auto failsafe
+	_fail_safe_hover = (_manual_control_sp->aux2 > 0.0f ||
+		(_local_pos->z > -10 && _manual_control_sp->aux3 > 0.0f) );
 
 	// SAFETY SWITCH go directly to MC mode
 	if (_fail_safe_hover) {
@@ -235,7 +236,7 @@ void Kite::update_transition_state()
 
 	rp(0) = _local_pos->x - _params_kite.pos_b(0);
 	rp(1) = _local_pos->y - _params_kite.pos_b(1);
-	rp(2) = _local_pos->z - _params_kite.pos_b(1);
+	rp(2) = _local_pos->z - _params_kite.pos_b(2);
 
 	// math::Vector<3> wind(0,0,4); // need to be a parameter
 

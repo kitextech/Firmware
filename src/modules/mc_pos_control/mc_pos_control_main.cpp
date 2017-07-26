@@ -2260,7 +2260,7 @@ MulticopterPositionControl::generate_attitude_setpoint(float dt)
 	if (!_control_mode.flag_control_velocity_enabled) {
 		_att_sp.roll_body = _manual.y * _params.man_roll_max;
 
-		/* Enable static pitch control when AUX1 is enabled (above 0) by KiteX */
+		/* Enable static pitch control when (tethered hover) AUX1 is enabled (above 0) by KiteX */
 		if (_manual.aux1 > 0.0f) {
 			_att_sp.pitch_body = _params.pitch_hvr;
 		} else {
@@ -2406,9 +2406,9 @@ MulticopterPositionControl::task_main()
 			_reset_alt_sp = true;
 		}
 
-		/* reset yaw setpoint while AUX1 is high Added by Andreas
+		/* KiteX reset yaw setpoint while AUX1 (tethered hover) is high
 		for manual tetheted flight */
-		if (_params.tet_pos_ctl > 0.5f || _manual.aux1 > 0.0f) {
+		if (_manual.aux1 > 0.0f) {
 			_reset_yaw_sp = true;
 		}
 
