@@ -601,7 +601,7 @@ _heading_reset_counter(0)
 	/* fetch initial parameter values */
 	parameters_update(true);
 
-	printf("INIT bx: %.2f, by: %.2f, bz: %.2f\n", (double) _params.pos_b(0), (double) _params.pos_b(1), (double) _params.pos_b(2));
+	printf("INITX bx: %.2f, by: %.2f, bz: %.2f\n", (double) _params.pos_b(0), (double) _params.pos_b(1), (double) _params.pos_b(2));
 }
 
 MulticopterPositionControl::~MulticopterPositionControl()
@@ -871,6 +871,8 @@ MulticopterPositionControl::poll_subscriptions()
 
 	if (updated) {
 		orb_copy(ORB_ID(vehicle_local_position), _local_pos_sub, &_local_pos);
+
+		// printf("local_pos timestamp: %llu, x: %.2f, y: %.2f, z: %.2f\n", _local_pos.timestamp, (double) _local_pos.x, (double) _local_pos.y, (double) _local_pos.z);
 
 		// check if a reset event has happened
 		// if the vehicle is in manual mode we will shift the setpoints of the
@@ -1772,7 +1774,7 @@ MulticopterPositionControl::control_position(float dt)
 		_vel_sp(1) = s(1) * _params.pos_p(1);
 		_vel_sp(2) = s(2) * _params.pos_p(2);
 
-		printf("sx: %.2f, sy: %.2f, sz: %.2f\n");
+		// printf("sx: %.2f, sy: %.2f, sz: %.2f\n");
 
 		//        _val_sp = s.emult(_params.pos_p); // Won't this also work?
 	}

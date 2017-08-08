@@ -57,6 +57,7 @@ set(msg_file_names
 	fence_vertex.msg
 	filtered_bottom_flow.msg
 	follow_target.msg
+	fw_turning.msg
 	fw_pos_ctrl_status.msg
 	fw_virtual_attitude_setpoint.msg
 	fw_virtual_rates_setpoint.msg

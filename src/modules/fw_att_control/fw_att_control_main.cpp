@@ -58,6 +58,7 @@
 #include <uORB/topics/actuator_controls.h>
 #include <uORB/topics/battery_status.h>
 #include <uORB/topics/control_state.h>
+#include <uORB/topics/fw_turning.h>  // kitex
 #include <uORB/topics/fw_virtual_attitude_setpoint.h>
 #include <uORB/topics/fw_virtual_rates_setpoint.h>
 #include <uORB/topics/manual_control_setpoint.h>
@@ -132,10 +133,12 @@ private:
 	orb_advert_t	_attitude_sp_pub;		/**< attitude setpoint point */
 	orb_advert_t	_actuators_0_pub;		/**< actuator control group 0 setpoint */
 	orb_advert_t	_actuators_2_pub;		/**< actuator control group 1 setpoint (Airframe) */
+	orb_advert_t	_fw_turning_sp_pub; // kitex
 
 	orb_id_t _rates_sp_id;	// pointer to correct rates setpoint uORB metadata structure
 	orb_id_t _actuators_id;	// pointer to correct actuator controls0 uORB metadata structure
 	orb_id_t _attitude_setpoint_id;
+	orb_id_t _fw_turning_sp_id;  // kitex
 
 	struct actuator_controls_s			_actuators;		/**< actuator control inputs */
 	struct actuator_controls_s			_actuators_airframe;	/**< actuator control inputs */
@@ -149,6 +152,7 @@ private:
 	struct vehicle_land_detected_s			_vehicle_land_detected;	/**< vehicle land detected */
 	struct vehicle_rates_setpoint_s			_rates_sp;	/* attitude rates setpoint */
 	struct vehicle_status_s				_vehicle_status;	/**< vehicle status */
+	struct fw_turning_s _fw_turning_sp; // kitex
 
 	perf_counter_t	_loop_perf;			/**< loop performance counter */
 	perf_counter_t	_nonfinite_input_perf;		/**< performance counter for non finite input */
@@ -172,7 +176,7 @@ private:
 		float phiC;
 		float thetaC;
 		float turning_radius;
-		float tether_len;
+		// float tether_len;
 
 		float p_tc;
 		float p_p;
@@ -237,7 +241,7 @@ private:
 		param_t phiC;
 		param_t thetaC;
 		param_t turning_radius;
-		param_t tether_len;
+		// param_t tether_len;
 		param_t x_pos_b;
 		param_t y_pos_b;
 		param_t z_pos_b;
@@ -331,6 +335,7 @@ void update_pi_projection();
 void update_pi_target_point(float search_radius);
 void update_pi_arc();
 void update_pi_roll_rate();
+void publishTurning();
 
 void control_looping(float dt);
 
@@ -434,6 +439,7 @@ FixedwingAttitudeControl::FixedwingAttitudeControl() :
 	_rates_sp_id(nullptr),
 	_actuators_id(nullptr),
 	_attitude_setpoint_id(nullptr),
+	_fw_turning_sp_id(nullptr),
 
 	/* performance counters */
 	_loop_perf(perf_alloc(PC_ELAPSED, "fwa_dt")),
@@ -465,6 +471,7 @@ FixedwingAttitudeControl::FixedwingAttitudeControl() :
 	_vcontrol_mode = {};
 	_vehicle_land_detected = {};
 	_vehicle_status = {};
+	_fw_turning_sp = {};
 
 	_vel_pi.zero();
 	_pos_pi.zero();
@@ -481,7 +488,7 @@ FixedwingAttitudeControl::FixedwingAttitudeControl() :
 	_parameter_handles.y_pos_b		= param_find("MPC_Y_POS_B");
 	_parameter_handles.z_pos_b		= param_find("MPC_Z_POS_B");
 
-	_parameter_handles.tether_len	= param_find("MPC_TETHER_LEN");
+	// _parameter_handles.tether_len	= param_find("MPC_TETHER_LEN");
 
 	_parameter_handles.p_tc = param_find("FW_P_TC");
 	_parameter_handles.p_p = param_find("FW_PR_P");
@@ -585,7 +592,7 @@ FixedwingAttitudeControl::parameters_update()
 	param_get(_parameter_handles.thetaC, &_parameters.thetaC);
 	param_get(_parameter_handles.turning_radius, &_parameters.turning_radius);
 
-	param_get(_parameter_handles.tether_len, &_parameters.tether_len);
+	// param_get(_parameter_handles.tether_len, &_parameters.tether_len);
 
 	float v;
 	param_get(_parameter_handles.x_pos_b, &v);
@@ -765,7 +772,7 @@ FixedwingAttitudeControl::local_pos_poll()
 		_vel(1) = _local_pos.vy;
 		_vel(2) = _local_pos.vz;
 
-		// printf("%.2f, %.2f, %.2f, %.2f, %.2f, %.2f\n", (double) _pos(0), (double) _pos(1), (double) _pos(2), (double) _vel(0), (double) _vel(1), (double) _vel(2));
+		printf("%llu, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f\n", _local_pos.timestamp, (double) _pos(0), (double) _pos(1), (double) _pos(2), (double) _vel(0), (double) _vel(1), (double) _vel(2));
 	}
 }
 
@@ -804,6 +811,7 @@ FixedwingAttitudeControl::vehicle_status_poll()
 				_actuators_id = ORB_ID(actuator_controls_0);
 				_attitude_setpoint_id = ORB_ID(vehicle_attitude_setpoint);
 			}
+			_fw_turning_sp_id = ORB_ID(fw_turning);
 		}
 	}
 }
@@ -839,6 +847,7 @@ void FixedwingAttitudeControl::control_looping(float dt)
 	update_pi_target_point(0.8f * _parameters.turning_radius);
 	update_pi_arc();
 	update_pi_roll_rate();
+	publishTurning();
 	// printf("_arc_radius: %.3f \n", (double) _arc_radius);
 }
 
@@ -1546,10 +1555,11 @@ void FixedwingAttitudeControl::update_pi(float phi, float theta)
 // KiteX: Run when the turning radius changes
 void FixedwingAttitudeControl::update_pi_path(float radius)
 {
+	float offset = (float) M_PI_2; // index 0 at bottom of circle
 	for (int i = 0; i < 60; i++) {
 		float rho = i*2*M_PI/60;
-		_pi_path_x[i] = radius*cosf(rho + M_PI_2);
-		_pi_path_y[i] = -radius*sinf(rho + M_PI_2);
+		_pi_path_x[i] = radius*cosf(rho + offset);
+		_pi_path_y[i] = -radius*sinf(rho + offset);
 	}
 }
 
@@ -1581,7 +1591,7 @@ void FixedwingAttitudeControl::update_pi_arc()
 {
 	math::Vector<2> delta_pos = _target_point_pi - _pos_pi;
 	float _arc_angle = signed_angle(_vel_pi, delta_pos);
-	float factor = 1/sqrtf(2*(1 - cosf(2*_arc_angle))); // Could use a simple sin function 
+	float factor = 1/sqrtf(2*(1 - cosf(2*_arc_angle))); // Could use a simple sin function
 	_arc_radius = copysignf(1.0f, _arc_angle)*factor*delta_pos.length();
 }
 
@@ -1589,6 +1599,27 @@ void FixedwingAttitudeControl::update_pi_roll_rate()
 {
 	//_arc_roll_rate = _vel.length()/_arc_radius;
 	_arc_roll_rate = _vel_pi.length()/_arc_radius;
+}
+
+void FixedwingAttitudeControl::publishTurning() {
+
+	/*
+	 * Lazily publish the turning setpoint (for analysis)
+	 * only once available
+	 */
+	_fw_turning_sp.timestamp = hrt_absolute_time();
+	_fw_turning_sp.index = (uint16_t) _pi_path_i;
+	_fw_turning_sp.arc_radius = _arc_radius;
+	_fw_turning_sp.roll_rate = _arc_roll_rate;
+
+	printf("time: %llu, index: %i, arc_radius: %0.2f, arc_roll_rate: %0.2f\n", _fw_turning_sp.timestamp, _pi_path_i, _arc_radius, _arc_roll_rate);
+
+	if (_fw_turning_sp_pub != nullptr) {
+		orb_publish(_fw_turning_sp_id, _fw_turning_sp_pub, &_fw_turning_sp);
+
+	} else if (_fw_turning_sp_id) {
+		_fw_turning_sp_pub = orb_advertise(_fw_turning_sp_id, &_fw_turning_sp);
+	}
 }
 
 // KiteX: Pure helper functions

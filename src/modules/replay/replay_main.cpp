@@ -644,11 +644,19 @@ void Replay::task_main()
 
 	//we update the timestamps from the file by a constant offset to match
 	//the current replay time
-	const uint64_t timestamp_offset = _replay_start_time - _file_start_time;
+	const bool fileStartTimeLarger = _replay_start_time < _file_start_time;
+	const uint64_t timestamp_offset = fileStartTimeLarger ? _file_start_time - _replay_start_time : _replay_start_time - _file_start_time;
+
+	// printf("_replay_start_time: %llu\n", _replay_start_time);
+	// printf("_file_start_time: %llu\n", _file_start_time);
+	// printf("timestamp_offset: %llu\n", timestamp_offset);
+
+
 	uint32_t nr_published_messages = 0;
 	streampos last_additional_message_pos = _data_section_start;
 
 	while (!_task_should_exit && replay_file) {
+		printf("%i\n", nr_published_messages);
 
 		//Find the next message to publish. Messages from different subscriptions don't need
 		//to be in chronological order, so we need to check all subscriptions
@@ -687,10 +695,22 @@ void Replay::task_main()
 
 
 		//wait if necessary
-		const uint64_t publish_timestamp = next_file_time + timestamp_offset;
+		uint64_t publish_timestamp = fileStartTimeLarger ? next_file_time - timestamp_offset : next_file_time + timestamp_offset;
+
 		uint64_t cur_time = hrt_absolute_time();
+		if (publish_timestamp > 1000000000000 ) { // fix error for first log message with happen before
+			publish_timestamp = cur_time;
+		}
+
+		// printf("next_file_time: %llu\n", next_file_time);
+		//
+		// printf("timestamp_offset: %llu\n", timestamp_offset);
+		// printf("cur_time: %llu\n", cur_time);
+		// printf("publish_timestamp: %llu\n", publish_timestamp);
 
 		if (cur_time < publish_timestamp) {
+			// printf("sleep for micro: %llu\n", (publish_timestamp - cur_time));
+
 			usleep(publish_timestamp - cur_time);
 		}
 

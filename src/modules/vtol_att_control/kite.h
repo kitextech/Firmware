@@ -107,7 +107,7 @@ private:
 	} _vtol_schedule;
 
 	// other local variables
-	float _airspeed_tot; 		/** speed estimation for propwash controlled surfaces */
+	// float _airspeed_tot; 		/** speed estimation for propwash controlled surfaces */
 
 
 	float _yaw_transition_start;  // roll angle at the start of transition (kite)
