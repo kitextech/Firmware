@@ -772,7 +772,7 @@ FixedwingAttitudeControl::local_pos_poll()
 		_vel(1) = _local_pos.vy;
 		_vel(2) = _local_pos.vz;
 
-		printf("%llu, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f\n", _local_pos.timestamp, (double) _pos(0), (double) _pos(1), (double) _pos(2), (double) _vel(0), (double) _vel(1), (double) _vel(2));
+		// printf("posTimestamp: %llu, currentTime: %llu, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f\n", _local_pos.timestamp, hrt_absolute_time(), (double) _pos(0), (double) _pos(1), (double) _pos(2), (double) _vel(0), (double) _vel(1), (double) _vel(2));
 	}
 }
 
@@ -1609,10 +1609,12 @@ void FixedwingAttitudeControl::publishTurning() {
 	 */
 	_fw_turning_sp.timestamp = hrt_absolute_time();
 	_fw_turning_sp.index = (uint16_t) _pi_path_i;
+	_fw_turning_sp.x = _target_point_pi(0);
+	_fw_turning_sp.y = _target_point_pi(1);
 	_fw_turning_sp.arc_radius = _arc_radius;
 	_fw_turning_sp.roll_rate = _arc_roll_rate;
 
-	printf("time: %llu, index: %i, arc_radius: %0.2f, arc_roll_rate: %0.2f\n", _fw_turning_sp.timestamp, _pi_path_i, _arc_radius, _arc_roll_rate);
+	// printf("time: %llu, index: %i, arc_radius: %0.2f, arc_roll_rate: %0.2f\n", _fw_turning_sp.timestamp, _pi_path_i, (double) _arc_radius, (double) _arc_roll_rate);
 
 	if (_fw_turning_sp_pub != nullptr) {
 		orb_publish(_fw_turning_sp_id, _fw_turning_sp_pub, &_fw_turning_sp);
