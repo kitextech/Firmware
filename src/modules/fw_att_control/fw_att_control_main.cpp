@@ -1527,17 +1527,9 @@ int fw_att_control_main(int argc, char *argv[])
 	-Bonus
 	Make unit sized path and multiply radius JIT
 	Make path an array of vectors
-	Make faster signed_angle with atan
 */
 
 // Impure versions
-// _parameters.e_pi_x(0) = sinf(phi);
-// _parameters.e_pi_x(1) = -cosf(phi);
-// _parameters.e_pi_x(2) = 0;
-//
-// _parameters.e_pi_y(0) = -cosf(phi)*sinf(theta);
-// _parameters.e_pi_y(1) = -sinf(phi)*sinf(theta);
-// _parameters.e_pi_y(2) = -cosf(theta);
 
 
 // KiteX: Run when the angles for C change
@@ -1632,7 +1624,7 @@ float FixedwingAttitudeControl::signed_angle(const math::Vector<2> &left, const 
 	const math::Vector<2> e_x = left.normalized();
 	const math::Vector<2> e_y(-e_x(1), e_x(0));
 
-	return atan2f(right*e_x, right*e_y);
+	return atan2f(right*e_y, right*e_x);
 }
 
 float FixedwingAttitudeControl::square_distance_to_path(const int path_i)
