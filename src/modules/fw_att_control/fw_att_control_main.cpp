@@ -1636,7 +1636,7 @@ float FixedwingAttitudeControl::signed_angle(const math::Vector<2> &left, const 
 	const math::Vector<2> e_x = left.normalized();
 	const math::Vector<2> e_y(-e_x(1), e_x(0));
 
-	return atan2f(right*e_x, right*e_y);
+	return atan2f(right*e_y, right*e_x);
 }
 
 float FixedwingAttitudeControl::square_distance_to_path(const int path_i)
