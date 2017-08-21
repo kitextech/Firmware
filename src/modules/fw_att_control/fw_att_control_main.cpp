@@ -1588,7 +1588,6 @@ void FixedwingAttitudeControl::update_pi_arc()
 
 void FixedwingAttitudeControl::update_pi_roll_rate()
 {
-	//_arc_roll_rate = _vel.length()/_arc_radius;
 	_arc_roll_rate = _vel_pi.length()/_arc_radius;
 }
 
