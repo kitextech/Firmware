@@ -1531,7 +1531,6 @@ int fw_att_control_main(int argc, char *argv[])
 
 // Impure versions
 
-
 // KiteX: Run when the angles for C change
 void FixedwingAttitudeControl::update_pi(float phi, float theta)
 {
