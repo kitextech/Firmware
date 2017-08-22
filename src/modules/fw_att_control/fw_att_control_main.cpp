@@ -1588,7 +1588,7 @@ void FixedwingAttitudeControl::update_pi_arc()
 
 void FixedwingAttitudeControl::update_pi_roll_rate()
 {
-	_arc_roll_rate = _vel_pi.length()/_arc_radius;
+	_arc_roll_rate = -_vel_pi.length()/_arc_radius;
 }
 
 void FixedwingAttitudeControl::publishTurning() {
@@ -1599,8 +1599,12 @@ void FixedwingAttitudeControl::publishTurning() {
 	 */
 	_fw_turning_sp.timestamp = hrt_absolute_time();
 	_fw_turning_sp.index = (uint16_t) _pi_path_i;
-	_fw_turning_sp.x = _target_point_pi(0);
-	_fw_turning_sp.y = _target_point_pi(1);
+	_fw_turning_sp.x = _pos_pi(0);
+	_fw_turning_sp.y = _pos_pi(1);
+	_fw_turning_sp.vx = _vel_pi(0);
+	_fw_turning_sp.vy = _vel_pi(1);
+	_fw_turning_sp.tx = _target_point_pi(0);
+	_fw_turning_sp.ty = _target_point_pi(1);
 	_fw_turning_sp.arc_radius = _arc_radius;
 	_fw_turning_sp.roll_rate = _arc_roll_rate;
 
