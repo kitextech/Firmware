@@ -1032,8 +1032,8 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 	/* angular rates error */
 	math::Vector<3> rates_err = _rates_sp - rates;
 
-	/* KiteX don't fight yaw rotation, if in tether hover mode (AUX1) and not in failsafe (AUX2) */
-	if (_manual_control_sp.aux1 > 0 && _manual_control_sp.aux2 < 0) {
+	/* KiteX don't fight yaw rotation, if in tether hover mode (AUX1) */
+	if (_manual_control_sp.aux1 > 0 ){
 		rates_err(2) = 0;
 		_rates_int(2) = 0;
 	}
