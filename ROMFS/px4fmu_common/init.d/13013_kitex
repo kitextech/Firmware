@@ -12,7 +12,7 @@
 
 sh /etc/init.d/rc.vtol_defaults
 
-fw_pos_control_l1 stop // stop the controller to get more free RAM
+# fw_pos_control_l1 stop // stop the controller to get more free RAM
 
 if [ $AUTOCNF == yes ]
 then
