@@ -335,7 +335,7 @@ void update_pi_projection();
 void update_pi_target_point(float search_radius);
 void update_pi_arc();
 void update_pi_roll_rate();
-void publishTurning();
+// void publishTurning();
 
 void control_looping(float dt);
 
@@ -847,7 +847,7 @@ void FixedwingAttitudeControl::control_looping(float dt)
 	update_pi_target_point(0.8f * _parameters.turning_radius);
 	update_pi_arc();
 	update_pi_roll_rate();
-	publishTurning();
+	// publishTurning();
 	// printf("_arc_radius: %.3f \n", (double) _arc_radius);
 }
 
@@ -1591,32 +1591,32 @@ void FixedwingAttitudeControl::update_pi_roll_rate()
 	_arc_roll_rate = -_vel_pi.length()/_arc_radius;
 }
 
-void FixedwingAttitudeControl::publishTurning() {
-
-	/*
-	 * Lazily publish the turning setpoint (for analysis)
-	 * only once available
-	 */
-	_fw_turning_sp.timestamp = hrt_absolute_time();
-	_fw_turning_sp.index = (uint16_t) _pi_path_i;
-	_fw_turning_sp.x = _pos_pi(0);
-	_fw_turning_sp.y = _pos_pi(1);
-	_fw_turning_sp.vx = _vel_pi(0);
-	_fw_turning_sp.vy = _vel_pi(1);
-	_fw_turning_sp.tx = _target_point_pi(0);
-	_fw_turning_sp.ty = _target_point_pi(1);
-	_fw_turning_sp.arc_radius = _arc_radius;
-	_fw_turning_sp.roll_rate = _arc_roll_rate;
-
-	// printf("time: %llu, index: %i, arc_radius: %0.2f, arc_roll_rate: %0.2f\n", _fw_turning_sp.timestamp, _pi_path_i, (double) _arc_radius, (double) _arc_roll_rate);
-
-	if (_fw_turning_sp_pub != nullptr) {
-		orb_publish(_fw_turning_sp_id, _fw_turning_sp_pub, &_fw_turning_sp);
-
-	} else if (_fw_turning_sp_id) {
-		_fw_turning_sp_pub = orb_advertise(_fw_turning_sp_id, &_fw_turning_sp);
-	}
-}
+// void FixedwingAttitudeControl::publishTurning() {
+//
+// 	/*
+// 	 * Lazily publish the turning setpoint (for analysis)
+// 	 * only once available
+// 	 */
+// 	_fw_turning_sp.timestamp = hrt_absolute_time();
+// 	_fw_turning_sp.index = (uint16_t) _pi_path_i;
+// 	_fw_turning_sp.x = _pos_pi(0);
+// 	_fw_turning_sp.y = _pos_pi(1);
+// 	_fw_turning_sp.vx = _vel_pi(0);
+// 	_fw_turning_sp.vy = _vel_pi(1);
+// 	_fw_turning_sp.tx = _target_point_pi(0);
+// 	_fw_turning_sp.ty = _target_point_pi(1);
+// 	_fw_turning_sp.arc_radius = _arc_radius;
+// 	_fw_turning_sp.roll_rate = _arc_roll_rate;
+//
+// 	// printf("time: %llu, index: %i, arc_radius: %0.2f, arc_roll_rate: %0.2f\n", _fw_turning_sp.timestamp, _pi_path_i, (double) _arc_radius, (double) _arc_roll_rate);
+//
+// 	if (_fw_turning_sp_pub != nullptr) {
+// 		orb_publish(_fw_turning_sp_id, _fw_turning_sp_pub, &_fw_turning_sp);
+//
+// 	} else if (_fw_turning_sp_id) {
+// 		_fw_turning_sp_pub = orb_advertise(_fw_turning_sp_id, &_fw_turning_sp);
+// 	}
+// }
 
 // KiteX: Pure helper functions
 

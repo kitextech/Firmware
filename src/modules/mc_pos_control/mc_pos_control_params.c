@@ -87,7 +87,7 @@ PARAM_DEFINE_FLOAT(MPC_Z_POS_B, 0.0f);
  * @increment 0.001
  * @group Multicopter Position Control
  */
-PARAM_DEFINE_FLOAT(MPC_PITCH_HVR, 0.174f);
+PARAM_DEFINE_FLOAT(MPC_PITCH_HVR, -0.174f);
 
 /**
  * Tether Hover thrust
