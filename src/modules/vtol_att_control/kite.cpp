@@ -243,7 +243,7 @@ void Kite::update_transition_state()
 	if (_vtol_schedule.flight_mode == TRANSITION_FRONT) {
 
 		float headingCorrected = heading - math::constrain(_airspeed_ratio * _airspeed_ratio, 0.0f, 1.0f) * atan2f(_params_kite.wind_speed, _speed);
-		float pitchGoal = atan2f(- rp(2), sqrt(rp(0) * rp(0) * rp(1) * rp(1)));
+		float pitchGoal = atan2f(- rp(2), sqrt(rp(0) * rp(0) + rp(1) * rp(1)));
 		float pitch = (1.0f - t)*_pitch_transition_start + t*pitchGoal;
 		float roll = (1.0f - t)*_roll_transition_start + t*_params_kite.trans_forward_roll;
 
