@@ -75,7 +75,7 @@ float SpeedController::control_thrust(float speeed) {
 		/*
 		 * anti-windup: do not allow integrator to increase if actuator is at limit
 		 */
-		if (_last_output < -1.0f) {
+		if (_last_output < _min_throttle) {
 			/* only allow motion to center: increase value */
 			id = math::max(id, 0.0f);
 
@@ -96,7 +96,7 @@ float SpeedController::control_thrust(float speeed) {
 		       error * _k_p
 		       + integrator_constrained;  //scaler is proportional to 1/airspeed
 
-	return math::constrain(_last_output, -1.0f, 1.0f);
+	return math::constrain(_last_output, _min_throttle, 1.0f);
 }
 
 
