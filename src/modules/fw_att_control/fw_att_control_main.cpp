@@ -51,6 +51,7 @@
 #include <ecl/attitude_fw/ecl_roll_controller.h>
 #include <ecl/attitude_fw/ecl_wheel_controller.h>
 #include <ecl/attitude_fw/ecl_yaw_controller.h>
+#include "fw_speed_controller.hpp"
 #include <geo/geo.h>
 #include <mathlib/mathlib.h>
 #include <systemlib/param/param.h>
@@ -199,6 +200,12 @@ private:
 		float roll_to_yaw_ff;
 		int32_t y_coordinated_method;
 		float y_rmax;
+		float s_p; // KiteX Speed control
+		float s_i;
+		float s_ff;
+		float s_t_min;
+		float s_target;
+		float s_integrator_max;
 		float w_p;
 		float w_i;
 		float w_ff;
@@ -267,6 +274,12 @@ private:
 		param_t roll_to_yaw_ff;
 		param_t y_coordinated_method;
 		param_t y_rmax;
+		param_t s_p; // KiteX Speed control
+		param_t s_i;
+		param_t s_ff;
+		param_t s_t_min;
+		param_t s_target;
+		param_t s_integrator_max;
 		param_t w_p;
 		param_t w_i;
 		param_t w_ff;
@@ -326,23 +339,24 @@ private:
 	ECL_PitchController				_pitch_ctrl;
 	ECL_YawController				_yaw_ctrl;
 	ECL_WheelController			_wheel_ctrl;
+	SpeedController 				_speed_ctrl; // KiteX speed control during the looping phase.
 
 
 	// KiteX
-void update_pi(float phi, float theta);
-void update_pi_path(float radius);
-void update_pi_projection();
-void update_pi_target_point(float search_radius);
-void update_pi_arc();
-void update_pi_roll_rate();
-// void publishTurning();
+	void update_pi(float phi, float theta);
+	void update_pi_path(float radius);
+	void update_pi_projection();
+	void update_pi_target_point(float search_radius);
+	void update_pi_arc();
+	void update_pi_roll_rate();
+	// void publishTurning();
 
-void control_looping(float dt);
+	void control_looping(float dt);
 
 
-// KiteX pure helpers
-float signed_angle(const math::Vector<2> &left, const math::Vector<2> &right);
-float square_distance_to_path(const int path_i);
+	// KiteX pure helpers
+	float signed_angle(const math::Vector<2> &left, const math::Vector<2> &right);
+	float square_distance_to_path(const int path_i);
 
 
 	/**
@@ -512,6 +526,13 @@ FixedwingAttitudeControl::FixedwingAttitudeControl() :
 	_parameter_handles.y_rmax = param_find("FW_Y_RMAX");
 	_parameter_handles.roll_to_yaw_ff = param_find("FW_RLL_TO_YAW_FF");
 
+	_parameter_handles.s_p = param_find("FW_SP_P"); // KiteX Speed control
+	_parameter_handles.s_i = param_find("FW_SP_I");
+	_parameter_handles.s_ff = param_find("FW_SP_FF");
+	_parameter_handles.s_t_min = param_find("FW_SP_MIN");
+	_parameter_handles.s_target = param_find("FW_SP_TARGET");
+	_parameter_handles.s_integrator_max = param_find("FW_SP_IMAX");
+
 	_parameter_handles.w_p = param_find("FW_WR_P");
 	_parameter_handles.w_i = param_find("FW_WR_I");
 	_parameter_handles.w_ff = param_find("FW_WR_FF");
@@ -627,6 +648,13 @@ FixedwingAttitudeControl::parameters_update()
 	param_get(_parameter_handles.y_rmax, &(_parameters.y_rmax));
 	param_get(_parameter_handles.roll_to_yaw_ff, &(_parameters.roll_to_yaw_ff));
 
+	param_get(_parameter_handles.s_p, &(_parameters.s_p)); // KiteX Speed control
+	param_get(_parameter_handles.s_i, &(_parameters.s_i));
+	param_get(_parameter_handles.s_ff, &(_parameters.s_ff));
+	param_get(_parameter_handles.s_t_min, &(_parameters.s_t_min));
+	param_get(_parameter_handles.s_target, &(_parameters.s_target));
+	param_get(_parameter_handles.s_integrator_max, &(_parameters.s_integrator_max));
+
 	param_get(_parameter_handles.w_p, &(_parameters.w_p));
 	param_get(_parameter_handles.w_i, &(_parameters.w_i));
 	param_get(_parameter_handles.w_ff, &(_parameters.w_ff));
@@ -705,6 +733,14 @@ FixedwingAttitudeControl::parameters_update()
 	_yaw_ctrl.set_coordinated_min_speed(_parameters.y_coordinated_min_speed);
 	_yaw_ctrl.set_coordinated_method(_parameters.y_coordinated_method);
 	_yaw_ctrl.set_max_rate(math::radians(_parameters.y_rmax));
+
+	/* speed control parameters */
+	_speed_ctrl.set_k_p(_parameters.s_p); // KiteX Speed control
+	_speed_ctrl.set_k_i(_parameters.s_i);
+	_speed_ctrl.set_k_ff(_parameters.s_ff);
+	_speed_ctrl.set_min_throttle(_parameters.s_t_min);
+	_speed_ctrl.set_target_speed(_parameters.s_target);
+	_speed_ctrl.set_integrator_max(_parameters.s_integrator_max);
 
 	/* wheel control parameters */
 	_wheel_ctrl.set_k_p(_parameters.w_p);
@@ -1191,6 +1227,7 @@ FixedwingAttitudeControl::task_main()
 					_roll_ctrl.reset_integrator();
 					_pitch_ctrl.reset_integrator();
 					_yaw_ctrl.reset_integrator();
+					_speed_ctrl.reset_integrator();
 					_wheel_ctrl.reset_integrator();
 				}
 
@@ -1342,11 +1379,16 @@ FixedwingAttitudeControl::task_main()
 					_actuators.control[actuator_controls_s::INDEX_YAW] = (PX4_ISFINITE(yaw_u)) ? yaw_u + _parameters.trim_yaw :
 							_parameters.trim_yaw;
 
-					_actuators.control[actuator_controls_s::INDEX_THROTTLE] = _manual.z;
+					// _actuators.control[actuator_controls_s::INDEX_THROTTLE] = _manual.z;
 							// (PX4_ISFINITE(throttle_sp) &&
 							// //!(_vehicle_status.engine_failure ||
 							// !_vehicle_status.engine_failure_cmd) ?
 							// throttle_sp : 0.0f;
+
+
+					float throttle_u = _speed_ctrl.control_thrust( _vel.length() );
+					_actuators.control[actuator_controls_s::INDEX_THROTTLE] = (PX4_ISFINITE(throttle_u)) ? throttle_u : _manual.z;
+
 				// }
 
 				/*

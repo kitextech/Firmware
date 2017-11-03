@@ -294,6 +294,88 @@ PARAM_DEFINE_FLOAT(FW_YR_IMAX, 0.2f);
 PARAM_DEFINE_FLOAT(FW_Y_RMAX, 0.0f);
 
 /**
+ * Speed proportional Gain
+ *
+ * This defines the throttle setting depending on the
+ * current velocity error.
+ *
+ * @unit %/m/s
+ * @min 0.005
+ * @max 1.0
+ * @decimal 3
+ * @increment 0.005
+ * @group FW Attitude Control
+ */
+PARAM_DEFINE_FLOAT(FW_SP_P, 0.3f);
+
+/**
+ * Speed integrator Gain
+ *
+ * This gain defines how much throttle response will result out of a steady
+ * state error. It trims any constant error.
+ *
+ * @unit %/m
+ * @min 0.005
+ * @max 0.2
+ * @decimal 3
+ * @increment 0.005
+ * @group FW Attitude Control
+ */
+PARAM_DEFINE_FLOAT(FW_SP_I, 0.05f);
+
+/**
+ * Speed Integrator Anti-Windup
+ *
+ * The portion of the integrator part in the throttle setting is limited to this value.
+ *
+ * @min 0.0
+ * @max 1.0
+ * @decimal 2
+ * @increment 0.05
+ * @group FW Attitude Control
+ */
+PARAM_DEFINE_FLOAT(FW_SP_IMAX, 0.1f);
+
+/**
+ * Speed Throttle minimum value
+ *
+ * The minimum throttle setting duing FW flight
+ *
+ * @min 0.0
+ * @max 1.0
+ * @decimal 2
+ * @increment 0.05
+ * @group FW Attitude Control
+ */
+PARAM_DEFINE_FLOAT(FW_SP_MIN, 0.2f);
+
+/**
+ * Speed Target value
+ *
+ * The desired flight speed during FW flight
+ *
+ * @min 10.0
+ * @max 50.0
+ * @decimal 1
+ * @increment 0.1
+ * @group FW Attitude Control
+ */
+PARAM_DEFINE_FLOAT(FW_SP_TARGET, 22.0f);
+
+/**
+ * Speed Throttle FF
+ *
+ * Feed forward contribution to the throttle setting
+ *
+ * @min 0.0
+ * @max 1.0
+ * @decimal 2
+ * @increment 0.05
+ * @group FW Attitude Control
+ */
+PARAM_DEFINE_FLOAT(FW_SP_FF, 0.0f);
+
+/**
  * Roll control to yaw control feedforward gain.
  *
  * This gain can be used to counteract the "adverse yaw" effect for fixed wings.

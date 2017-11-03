@@ -37,6 +37,7 @@ px4_add_module(
 	COMPILE_FLAGS
 	SRCS
 		fw_att_control_main.cpp
+		fw_speed_controller.cpp
 	DEPENDS
 		platforms__common
 		git_ecl
