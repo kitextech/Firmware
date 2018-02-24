@@ -568,7 +568,7 @@ _heading_reset_counter(0)
 	/* fetch initial parameter values */
 	parameters_update(true);
 
-	printf("INITX bx: %.2f, by: %.2f, bz: %.2f\n", (double) _params.pos_b(0), (double) _params.pos_b(1), (double) _params.pos_b(2));
+	// printf("INITX bx: %.2f, by: %.2f, bz: %.2f\n", (double) _params.pos_b(0), (double) _params.pos_b(1), (double) _params.pos_b(2));
 }
 
 MulticopterPositionControl::~MulticopterPositionControl()
@@ -593,12 +593,6 @@ MulticopterPositionControl::~MulticopterPositionControl()
 	}
 
 	pos_control::g_control = nullptr;
-}
-
-void
-MulticopterPositionControl::reset_b()
-{
-
 }
 
 int
