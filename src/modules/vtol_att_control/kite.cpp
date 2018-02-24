@@ -112,7 +112,7 @@ Kite::parameters_update()
 	param_get(_params_handles_kite.z_pos_b, &f);
 	_params_kite.pos_b(2) = f;
 
-	printf("UPDATE KITE bx: %.2f, by: %.2f, bz: %.2f\n", (double) _params_kite.pos_b(0), (double) _params_kite.pos_b(1), (double) _params_kite.pos_b(2));
+	// printf("UPDATE KITE bx: %.2f, by: %.2f, bz: %.2f\n", (double) _params_kite.pos_b(0), (double) _params_kite.pos_b(1), (double) _params_kite.pos_b(2));
 }
 
 void Kite::update_vtol_state()
@@ -236,8 +236,6 @@ void Kite::update_transition_state()
 	rp(1) = _local_pos->y - _params_kite.pos_b(1);
 	rp(2) = _local_pos->z - _params_kite.pos_b(2);
 
-	// math::Vector<3> wind(0,0,4); // need to be a parameter
-
 	float heading = atan2f(rp(1), rp(0));
 
 	if (_vtol_schedule.flight_mode == TRANSITION_FRONT) {
@@ -247,11 +245,7 @@ void Kite::update_transition_state()
 		float pitch = (1.0f - t)*_pitch_transition_start + t*pitchGoal;
 		float roll = (1.0f - t)*_roll_transition_start + t*_params_kite.trans_forward_roll;
 
-		// _airspeed_ratio add pitch correction for wind
-
-		/** create time dependant pitch angle set point + 0.2 rad overlap over the switch value*/
-		// _v_att_sp->roll_body = (1.0f - t)*_roll_transition_start + t*_params_kite.trans_forward_roll;
-		// _v_att_sp->pitch_body = (1.0f - t)*_pitch_transition_start + t*_params_kite.trans_forward_pitch;
+		// TODO _airspeed_ratio add pitch correction for wind
 
 		_v_att_sp->yaw_body = headingCorrected; //_yaw_transition_start;
 		_v_att_sp->roll_body = roll;
@@ -339,7 +333,7 @@ void Kite::update_fw_state()
 
 float Kite::elevator_correction()
 {
-	return 1.6f * (1.0f - math::constrain(_airspeed_ratio , 0.0f, 1.0f)); // simplifed  (_vtol_schedule.flight_mode == FW_MODE ? 0 :
+	return 1.6f * (1.0f - math::constrain(_airspeed_ratio , 0.0f, 1.0f));
 }
 
 /**
