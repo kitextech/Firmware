@@ -95,11 +95,11 @@ Activates above 0.5
 PARAM_DEFINE_FLOAT(MPC_TET_POS_CTL, 0);
 
 
-## KiteX SuperQ kite specification
+## KiteX SuperQ kite specification ##
 
 The source code has been tested with two KiteX SuperQ demonstration models. For software in the loop simulation the following parameters can be used.
 
-#### Inertial properties (without tether): ####
+#### Inertial properties (without tether) ####
 * mass: 1.4 kg
 * J: the following matrix has been used for previous simulations.
 
@@ -120,28 +120,28 @@ function generateJ() {
 }
 ```
 
-#### Main Wing:####
+#### Main Wing: ####
 * airfoil: asymmetric low Reynolds number single airfoil
 * cord: 140 mm
 * span: 1400 mm
 * angle of incidence: 5 deg negative rotation about Y
 * distance to COG: (x,y,z): (0,0,0)
 
-#### Vertical wing:####
+#### Vertical wing: ####
 * airfoil: asymmetric low Reynolds number single element airfoil
 * cord: 140 mm
 * span: 600 (x2) mm
 * angle of incidence: 8 deg positive rotation about X
 * distance to COG: (x,y,z): (0,0,0)
 
-#### Rudder####
+#### Rudder ####
 * span: 600 mm
 * cord: 60 mm
 * airfoil: NACA 0012
 * distance to COG: (x,y,z): (0,0,700)
 * movement: ~ +- 30 deg with the 8000,8000 PX4 mixer setting.
 
-#### Elevator####
+#### Elevator ####
 * span: 600 mm
 * cord: 60 mm
 * airfoil: NACA 0012
@@ -149,14 +149,14 @@ function generateJ() {
 * movement: ~+- 40 deg. Neutral at ~ 24 degree positive Y
 * note: Should be parallel to fuselage at a normalised output of 0.6.
 
-#### Tether####
+#### Tether ####
 * length: 80 m
 * bridle attachment points on kite (3): (x,y,z): (0, (-680, 0, 680), 0)
 * brindle connection point: (x,y,z): (-2400, 0, 0)
 * mass: ~ 0.3 kg evenly distributed
 * thickness: ~ 1.5 mm
 
-#### Rotors####
+#### Rotors ####
 * model: DAL T5045C Cyclone
 * motor: Emax RS2205S 2300KV "Red Bottom" RaceSpec Motor
 * Bench test:
