@@ -258,13 +258,13 @@ private:
 	}		_params_handles;		/**< handles for interesting parameters */
 
 	struct {
-		math::Vector<3> att_p;					/**< P gain for angular error */
+		math::Vector<3> att_p;				/**< P gain for angular error */
 		math::Vector<3> rate_p;				/**< P gain for angular rate error */
 		math::Vector<3> rate_i;				/**< I gain for angular rate error */
-		math::Vector<3> rate_int_lim;			/**< integrator state limit for rate loop */
+		math::Vector<3> rate_int_lim;	/**< integrator state limit for rate loop */
 		math::Vector<3> rate_d;				/**< D gain for angular rate error */
 		math::Vector<3>	rate_ff;			/**< Feedforward gain for desired rates */
-		float yaw_ff;						/**< yaw control feed-forward */
+		float yaw_ff;									/**< yaw control feed-forward */
 
 		float tpa_breakpoint_p;				/**< Throttle PID Attenuation breakpoint */
 		float tpa_breakpoint_i;				/**< Throttle PID Attenuation breakpoint */
@@ -544,7 +544,6 @@ MulticopterAttitudeControl::MulticopterAttitudeControl() :
 		_sensor_correction.gyro_scale_2[i] = 1.0f;
 	}
 
-	printf("START MC ATT CONTROL");
 }
 
 MulticopterAttitudeControl::~MulticopterAttitudeControl()
@@ -1032,10 +1031,9 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 	/* angular rates error */
 	math::Vector<3> rates_err = _rates_sp - rates;
 
-	/* KiteX don't fight yaw rotation, if in tether hover mode (AUX1) */
-	if (_manual_control_sp.aux1 > 0 ){
-		rates_err(2) = 0;
-		_rates_int(2) = 0;
+	/* Andreas don't fight yaw rotation, if in tether hover mode and not in failsafe */
+	if (_manual_control_sp.aux1 > 0 && _manual_control_sp.aux2 < 0) {
+		rates_err(3) = 0;
 	}
 
 	_att_control = rates_p_scaled.emult(rates_err) +
