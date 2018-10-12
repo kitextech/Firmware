@@ -112,7 +112,7 @@ Kite::parameters_update()
 	param_get(_params_handles_kite.z_pos_b, &f);
 	_params_kite.pos_b(2) = f;
 
-	printf("UODATE KITE bx: %.2f, by: %.2f, bz: %.2f\n", (double) _params_kite.pos_b(0), (double) _params_kite.pos_b(1), (double) _params_kite.pos_b(2));
+	printf("UPDATE KITE bx: %.2f, by: %.2f, bz: %.2f\n", (double) _params_kite.pos_b(0), (double) _params_kite.pos_b(1), (double) _params_kite.pos_b(2));
 }
 
 void Kite::update_vtol_state()
@@ -243,7 +243,7 @@ void Kite::update_transition_state()
 	if (_vtol_schedule.flight_mode == TRANSITION_FRONT) {
 
 		float headingCorrected = heading - math::constrain(_airspeed_ratio * _airspeed_ratio, 0.0f, 1.0f) * atan2f(_params_kite.wind_speed, _speed);
-		float pitchGoal = atan2f(- rp(2), sqrt(rp(0) * rp(0) * rp(1) * rp(1)));
+		float pitchGoal = atan2f(- rp(2), sqrt(rp(0) * rp(0) + rp(1) * rp(1)));
 		float pitch = (1.0f - t)*_pitch_transition_start + t*pitchGoal;
 		float roll = (1.0f - t)*_roll_transition_start + t*_params_kite.trans_forward_roll;
 
