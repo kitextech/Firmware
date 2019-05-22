@@ -221,10 +221,27 @@ bool PositionControl::_interfaceMapping()
 
 void PositionControl::_positionController()
 {
-	// P-position controller
-	const Vector3f vel_sp_position = (_pos_sp - _pos).emult(Vector3f(_param_mpc_xy_p.get(), _param_mpc_xy_p.get(),
-					 _param_mpc_z_p.get()));
-	_vel_sp = vel_sp_position + _vel_sp;
+	// kitex begin
+	Vector3f vel_sp_position;
+	if (_param_mpc_sphere_en.get()) { 	// kitex
+		const Vector3f b = Vector3f(_param_mpc_x_pos_b.get(), _param_mpc_y_pos_b.get(), _param_mpc_z_pos_b.get());
+		const Vector3f bk =  (_pos - b);
+		const Vector3f ksp = (_pos_sp - _pos);
+		const Vector3f bk_unit = bk.unit();
+		const Vector3f ksp_corrected= ksp-(ksp*bk_unit)*bk_unit;
+		// P-position controller
+		vel_sp_position = ksp_corrected.emult(Vector3f(_param_mpc_xy_p.get(), _param_mpc_xy_p.get(), _param_mpc_z_p.get()));
+
+		_vel_sp = vel_sp_position + _vel_sp;
+		_vel_sp = _vel_sp - (_vel_sp*bk_unit)*bk_unit;
+	} else {
+		// P-position controller
+		vel_sp_position = (_pos_sp - _pos).emult(Vector3f(_param_mpc_xy_p.get(), _param_mpc_xy_p.get(),
+						 _param_mpc_z_p.get()));
+		_vel_sp = vel_sp_position + _vel_sp;
+	}
+	// kitex end
+
 
 	// Constrain horizontal velocity by prioritizing the velocity component along the
 	// the desired position setpoint over the feed-forward term.
@@ -261,7 +278,6 @@ void PositionControl::_velocityController(const float &dt)
 	// - the desired thrust in NE-direction is limited by the thrust excess after
 	// 	 consideration of the desired thrust in D-direction. In addition, the thrust in
 	// 	 NE-direction is also limited by the maximum tilt.
-
 	const Vector3f vel_err = _vel_sp - _vel;
 
 	// Consider thrust in D-direction.
