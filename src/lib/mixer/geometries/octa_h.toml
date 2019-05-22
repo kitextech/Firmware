@@ -1,0 +1,47 @@
+# Generic Octacopter in coax configuration
+
+[info]
+key = "8h"
+description = "Octocoper in H configuration"
+
+[rotor_default]
+axis      = [0.0, 0.0, -1.0]
+Ct        = 1.0
+Cm        = 0.05
+direction = "CW"
+
+[[rotors]]
+name      = "mot_1"
+position  = [0.485, -0.6, 0.0]
+
+[[rotors]]
+name     = "mot_2"
+position = [0.221, -0.6, 0.0]
+direction = "CCW"
+
+[[rotors]]
+name      = "mot_3"
+position  = [-0.221, -0.6, 0.0]
+direction = "CCW"
+
+[[rotors]]
+name     = "mot_4"
+position = [-0.485, -0.6, 0.0]
+
+[[rotors]]
+name     = "mot_5"
+position = [0.485, 0.6, 0.0]
+direction = "CCW"
+
+[[rotors]]
+name      = "mot_6"
+position  = [0.221, 0.6, 0.0]
+
+[[rotors]]
+name     = "mot_7"
+position = [-0.221, 0.6, 0.0]
+
+[[rotors]]
+name      = "mot_8"
+position  = [-0.485, 0.6, 0.0]
+direction = "CCW"

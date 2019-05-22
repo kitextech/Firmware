@@ -29,7 +29,7 @@ class ParameterGroup(object):
         Get parameter group vehicle type.
         """
         return self.af_class
-        
+
     def GetImageName(self):
         """
         Get parameter group image base name (w/o extension)
@@ -54,6 +54,8 @@ class ParameterGroup(object):
             return "OctoRotorXCoaxial"
         elif (self.name == "Octo Coax Wide"):
             return "OctoRotorXCoaxial"
+        elif (self.name == "Octorotor h"):
+            return "OctoRotorH"
         elif (self.name == "Quadrotor Wide"):
             return "QuadRotorWide"
         elif (self.name == "Quadrotor H"):
@@ -405,12 +407,12 @@ class SourceParser(object):
         # Store outputs
         for arch in archs:
             param.SetArch(arch, archs[arch])
-            
 
-        
+
+
 
         # Store the parameter
-        
+
         #Create a class-specific airframe group. This is needed to catch cases where an airframe type might cross classes (e.g. simulation)
         class_group_identifier=airframe_type+airframe_class
         if class_group_identifier not in self.param_groups:
@@ -456,7 +458,7 @@ class SourceParser(object):
         groups = sorted(groups, key=lambda x: x.GetName())
         groups = sorted(groups, key=lambda x: x.GetClass())
         groups = sorted(groups, key=lambda x: self.priority.get(x.GetName(), 0), reverse=True)
-        
+
         #Rename duplicate groups to include the class (creating unique headings in page TOC)
         duplicate_test=set()
         duplicate_set=set()
@@ -469,5 +471,5 @@ class SourceParser(object):
             if group.GetName() in duplicate_set:
                 group.name=group.GetName()+' (%s)' % group.GetClass()
 
-        
+
         return groups
