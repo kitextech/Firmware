@@ -181,6 +181,13 @@ bool PositionControl::_interfaceMapping()
 		_vel_dot(2) = 0.0f;
 	}
 
+	// kitex diable yaw
+	if (!_param_mc_yaw_en.get()) {
+		_yawspeed_sp = NAN;
+		_yaw_sp = NAN;
+	}
+	// kitex disable yaw end
+
 	if (!PX4_ISFINITE(_yawspeed_sp)) {
 		// Set the yawspeed to 0 since not used.
 		_yawspeed_sp = 0.0f;
@@ -283,6 +290,19 @@ void PositionControl::_velocityController(const float &dt)
 	_thr_sp(2) = math::constrain(thrust_desired_D, uMin, uMax);
 
 	if (PX4_ISFINITE(_thr_sp(0)) && PX4_ISFINITE(_thr_sp(1))) {
+
+		// Kitex constant forward force.
+		// rotate _thr_sp into local coordinate system
+		if (_param_mc_pitch_c.get()) {
+			Vector3f v_r = Vector3f(Dcmf(Eulerf(0.0f, 0.0f, -_yaw)) * Vector3f(_thr_sp(0), _thr_sp(1), 0.0f)); // unsure about +- yaw
+		 	v_r(0) = math::min(_param_mc_pitch_c.get(), v_r(0));
+			v_r = Vector3f(Dcmf(Eulerf(0.0f, 0.0f, _yaw)) * Vector3f(v_r(0), v_r(1), 0.0f));
+			_thr_sp(0) = v_r(0);
+			_thr_sp(1) = v_r(1);
+		}
+
+		// kitex constant forward force end
+
 		// Thrust set-point in NE-direction is already provided. Only
 		// scaling by the maximum tilt is required.
 		float thr_xy_max = fabsf(_thr_sp(2)) * tanf(_constraints.tilt);

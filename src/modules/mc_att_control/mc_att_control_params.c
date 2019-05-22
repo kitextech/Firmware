@@ -39,6 +39,36 @@
  * @author Anton Babushkin <anton@px4.io>
  */
 
+ /**
+  * Constant Pitch // KITEX
+  *
+  * Override the attitude setpoint to be of constant pitch.
+  *
+  * @unit rad
+  * @min -3.14
+  * @max 3.14
+  * @decimal 2
+  * @increment 0.01
+  * @group Multicopter Attitude Control
+  */
+ PARAM_DEFINE_FLOAT(MC_PITCH_C, -0.1f);
+
+ /**
+  * Enable Constant Pitch. // KITEX
+  *
+  * @boolean
+  * @group Multicopter Attitude Control
+  */
+ PARAM_DEFINE_INT32(MC_PITCH_C_EN, 0);
+
+ /**
+  * Enable yaw control. // KITEX
+  *
+  * @boolean
+  * @group Multicopter Attitude Control
+  */
+ PARAM_DEFINE_INT32(MC_YAW_EN, 1);
+
 /**
  * Roll P gain
  *
@@ -566,4 +596,3 @@ PARAM_DEFINE_FLOAT(MC_DTERM_CUTOFF, 0.f);
  * @group Multicopter Attitude Control
  */
 PARAM_DEFINE_INT32(MC_AIRMODE, 0);
-
