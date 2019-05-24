@@ -232,6 +232,10 @@ private:
 		(ParamFloat<px4::params::MPC_THRUST_F>) _param_mpc_thrust_f,
 		(ParamBool<px4::params::MPC_THRUST_F_EN>) _param_mpc_thrust_f_en,
 		(ParamBool<px4::params::MC_YAW_EN>) _param_mc_yaw_en,
+		(ParamBool<px4::params::MPC_ORBIT_EN>) _param_mpc_orbit_en,
+		(ParamFloat<px4::params::MPC_ORBIT_YAW>) _param_mpc_orbit_yaw,
+		(ParamFloat<px4::params::MPC_ORBIT_PITCH>) _param_mpc_orbit_pitch,
+
 
 		(ParamFloat<px4::params::MPC_THR_MAX>) _param_mpc_thr_max,
 		(ParamFloat<px4::params::MPC_THR_HOVER>) _param_mpc_thr_hover,

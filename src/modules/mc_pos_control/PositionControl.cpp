@@ -223,7 +223,33 @@ void PositionControl::_positionController()
 {
 	// kitex begin
 	Vector3f vel_sp_position;
-	if (_param_mpc_sphere_en.get()) { 	// kitex
+
+
+	if (_param_mpc_orbit_en.get()) {	// kitex
+		const Vector3f b = Vector3f(_param_mpc_x_pos_b.get(), _param_mpc_y_pos_b.get(), _param_mpc_z_pos_b.get());
+		const Vector3f bk =  (_pos - b);
+		const Vector3f sp_unit = Dcmf(Eulerf(0.0f, _param_mpc_orbit_pitch.get(), _param_mpc_orbit_yaw.get())) * Vector3f(1.0f, 0.0f, 0.0f);
+		const Vector3f sp = sp_unit * 80 + b;
+		const Vector3f ksp = (sp-_pos);
+		const Vector3f vel_sp_tangential = bk.cross(ksp).unit() * 2.0f;
+		// const Vector3f sp_unit = sp.unit();
+		float radialDistance = (ksp - (ksp*sp_unit) * sp_unit).length();
+
+		// printf("xxxx (x:%f.2) (y:%f.2) (z:%f.2) \n", (double) xxxx(0), (double) xxxx(1), (double) xxxx(2));
+		printf("sp (x:%f.2) (y:%f.2) (z:%f.2) \n", (double) sp(0), (double) sp(1), (double) sp(2));
+		printf("ksp (x:%f.2) (y:%f.2) (z:%f.2) \n", (double) ksp(0), (double) ksp(1), (double) ksp(2));
+		printf("radial distance: %.2f \n" , (double) radialDistance );
+
+
+		const Vector3f vel_sp_radial = - sp_unit.cross(vel_sp_tangential).unit() * math::constrain( radialDistance - 10.0f, -1.0f, 1.0f);
+
+		_vel_sp = _vel_sp + vel_sp_tangential + vel_sp_radial;
+
+		// const Vector3f ksp = (_pos_sp - _pos);
+
+
+	} else if ( _param_mpc_sphere_en.get() ) { 	// kitex
+
 		const Vector3f b = Vector3f(_param_mpc_x_pos_b.get(), _param_mpc_y_pos_b.get(), _param_mpc_z_pos_b.get());
 		const Vector3f bk =  (_pos - b);
 		const Vector3f ksp = (_pos_sp - _pos);
@@ -310,6 +336,8 @@ void PositionControl::_velocityController(const float &dt)
 		// Kitex constant forward force.
 		// rotate _thr_sp into local coordinate system
 		if (_param_mpc_thrust_f_en.get()) {
+
+			printf("Thrusting...");
 			Vector3f v_r = Vector3f(Dcmf(Eulerf(0.0f, 0.0f, -_yaw)) * Vector3f(_thr_sp(0), _thr_sp(1), 0.0f)); // unsure about +- yaw
 		 	v_r(0) = _param_mpc_thrust_f.get(); // math::min(, v_r(0));
 			v_r = Vector3f(Dcmf(Eulerf(0.0f, 0.0f, _yaw)) * Vector3f(v_r(0), v_r(1), 0.0f));

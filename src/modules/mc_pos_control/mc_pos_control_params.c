@@ -117,19 +117,55 @@
   */
  PARAM_DEFINE_INT32(MPC_SPHERE_EN, 0);
 
+ /**
+  * Enable orbit mode // KITEX
+  *
+  * @boolean
+  * @group Multicopter Position Control
+  */
+ PARAM_DEFINE_INT32(MPC_ORBIT_EN, 0);
+
+ /**
+  * angle between north and center of rotation  // KITEX
+  *
+  * xxx
+  *
+  * @unit norm
+  * @min 0
+  * @max 6.6
+  * @decimal 2
+  * @increment 0.01
+  * @group Multicopter Position Control
+  */
+ PARAM_DEFINE_FLOAT(MPC_ORBIT_YAW, 1.6f);
+
 /**
- * Minimum thrust in auto thrust control
+ * angle above ground in in orbit flight mode // kitex
  *
- * It's recommended to set it > 0 to avoid free fall with zero thrust.
+ * xxx
  *
  * @unit norm
- * @min 0.05
- * @max 1.0
+ * @min 0
+ * @max 1.6
  * @decimal 2
  * @increment 0.01
  * @group Multicopter Position Control
  */
-PARAM_DEFINE_FLOAT(MPC_THR_MIN, 0.12f);
+ PARAM_DEFINE_FLOAT(MPC_ORBIT_PITCH, 0.34f);
+
+ /**
+  * Minimum thrust in auto thrust control
+  *
+  * It's recommended to set it > 0 to avoid free fall with zero thrust.
+  *
+  * @unit norm
+  * @min 0.05
+  * @max 1.0
+  * @decimal 2
+  * @increment 0.01
+  * @group Multicopter Position Control
+  */
+  PARAM_DEFINE_FLOAT(MPC_THR_MIN, 0.12f);
 
 /**
  * Hover thrust
