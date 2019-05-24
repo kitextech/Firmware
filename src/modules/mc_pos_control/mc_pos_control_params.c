@@ -88,6 +88,28 @@
 
 
  /**
+  * Enable forward thrust in altitude mode // KITEX
+  *
+  * @boolean
+  * @group Multicopter Position Control
+  */
+ PARAM_DEFINE_INT32(MPC_THRUST_F_EN, 0);
+
+ /**
+  * Positive force forward in altitude mode // KITEX
+  *
+  * X direction
+  *
+  * @unit norm
+  * @min -1
+  * @max 1
+  * @decimal 2
+  * @increment 0.01
+  * @group Multicopter Position Control
+  */
+ PARAM_DEFINE_FLOAT(MPC_THRUST_F, 0.15f);
+
+ /**
   * Enable modified position controller to work on sphere // KITEX
   *
   * @boolean

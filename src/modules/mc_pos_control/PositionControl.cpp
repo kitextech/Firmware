@@ -309,9 +309,9 @@ void PositionControl::_velocityController(const float &dt)
 
 		// Kitex constant forward force.
 		// rotate _thr_sp into local coordinate system
-		if (_param_mc_pitch_c.get()) {
+		if (_param_mpc_thrust_f_en.get()) {
 			Vector3f v_r = Vector3f(Dcmf(Eulerf(0.0f, 0.0f, -_yaw)) * Vector3f(_thr_sp(0), _thr_sp(1), 0.0f)); // unsure about +- yaw
-		 	v_r(0) = math::min(_param_mc_pitch_c.get(), v_r(0));
+		 	v_r(0) = _param_mpc_thrust_f.get(); // math::min(, v_r(0));
 			v_r = Vector3f(Dcmf(Eulerf(0.0f, 0.0f, _yaw)) * Vector3f(v_r(0), v_r(1), 0.0f));
 			_thr_sp(0) = v_r(0);
 			_thr_sp(1) = v_r(1);
