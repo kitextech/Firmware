@@ -215,6 +215,10 @@ private:
 	bool _gear_state_initialized{false};		/**< true if the gear state has been initialized */
 
 	DEFINE_PARAMETERS(
+		(ParamFloat<px4::params::MC_PITCH_C>) _param_mc_pitch_c, // kitex. See param descriptions in mc_att_control_params.c
+		(ParamBool<px4::params::MC_PITCH_C_EN>) _param_mc_pitch_c_en, // kitex
+		(ParamBool<px4::params::MC_YAW_EN>) _param_mc_yaw_en, // kitex
+
 		(ParamFloat<px4::params::MC_ROLL_P>) _param_mc_roll_p,
 		(ParamFloat<px4::params::MC_ROLLRATE_P>) _param_mc_rollrate_p,
 		(ParamFloat<px4::params::MC_ROLLRATE_I>) _param_mc_rollrate_i,
@@ -291,4 +295,3 @@ private:
 	float _man_tilt_max;			/**< maximum tilt allowed for manual flight [rad] */
 
 };
-

@@ -224,6 +224,17 @@ private:
 	bool _ctrl_vel[3] = {true, true, true}; /**< True if the control-loop for velocity was used */
 
 	DEFINE_PARAMETERS(
+
+		// Kitex parameter definition
+		(ParamFloat<px4::params::MPC_X_POS_B>) _param_mpc_x_pos_b,
+		(ParamFloat<px4::params::MPC_Y_POS_B>) _param_mpc_y_pos_b,
+		(ParamFloat<px4::params::MPC_Z_POS_B>) _param_mpc_z_pos_b,
+		(ParamBool<px4::params::MPC_SPHERE_EN>) _param_mpc_sphere_en,
+		(ParamFloat<px4::params::MPC_THRUST_F>) _param_mpc_thrust_f,
+		(ParamBool<px4::params::MPC_THRUST_F_EN>) _param_mpc_thrust_f_en,
+		(ParamBool<px4::params::MC_YAW_EN>) _param_mc_yaw_en,
+    // Kitex end
+
 		(ParamFloat<px4::params::MPC_THR_MAX>) _param_mpc_thr_max,
 		(ParamFloat<px4::params::MPC_THR_HOVER>) _param_mpc_thr_hover,
 		(ParamFloat<px4::params::MPC_THR_MIN>) _param_mpc_thr_min,

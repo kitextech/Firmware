@@ -38,6 +38,82 @@
  * @author Anton Babushkin <anton@px4.io>
  */
 
+ /**                                        Kitex
+         This part is the definition of the new B parameter in the kite (Tether)
+ **/
+
+ /**
+  * Position of B in NED // KITEX
+  *
+  * X direction
+  *
+  * @unit norm
+  * @min -200
+  * @max 200
+  * @decimal 2
+  * @increment 0.01
+  * @group Multicopter Position Control
+  */
+ PARAM_DEFINE_FLOAT(MPC_X_POS_B, 0.0f);
+
+ /**
+  * Position of B in NED // KITEX
+  *
+  * Y direction
+  *
+  * @unit norm
+  * @min -200
+  * @max 200
+  * @decimal 2
+  * @increment 0.01
+  * @group Multicopter Position Control
+  */
+ PARAM_DEFINE_FLOAT(MPC_Y_POS_B, -80.0f);
+
+ /**
+  * Position of B in NED // KITEX
+  *
+  * X direction
+  *
+  * @unit norm
+  * @min -200
+  * @max 200
+  * @decimal 2
+  * @increment 0.01
+  * @group Multicopter Position Control
+  */
+ PARAM_DEFINE_FLOAT(MPC_Z_POS_B, 0.0f);
+
+ /**
+  * Enable forward thrust in altitude mode // KITEX
+  *
+  * @boolean
+  * @group Multicopter Position Control
+  */
+ PARAM_DEFINE_INT32(MPC_THRUST_F_EN, 0);
+
+ /**
+  * Positive force forward in altitude mode // KITEX
+  *
+  * X direction
+  *
+  * @unit norm
+  * @min -1
+  * @max 1
+  * @decimal 2
+  * @increment 0.01
+  * @group Multicopter Position Control
+  */
+ PARAM_DEFINE_FLOAT(MPC_THRUST_F, 0.15f);
+ 
+ /**
+  * Enable modified position controller to work on sphere // KITEX
+  *
+  * @boolean
+  * @group Multicopter Position Control
+  */
+ PARAM_DEFINE_INT32(MPC_SPHERE_EN, 0);
+
 /**
  * Minimum thrust in auto thrust control
  *

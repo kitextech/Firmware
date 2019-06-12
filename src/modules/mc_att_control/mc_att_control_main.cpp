@@ -417,7 +417,7 @@ MulticopterAttitudeControl::generate_attitude_setpoint(float dt, bool reset_yaw_
 	const float yaw = Eulerf(Quatf(_v_att.q)).psi();
 
 	/* reset yaw setpoint to current position if needed */
-	if (reset_yaw_sp) {
+	if (reset_yaw_sp ||  !_param_mc_yaw_en.get()) { // kitex resets yaw in manual mode and with
 		_man_yaw_sp = yaw;
 
 	} else if (_manual_control_sp.z > 0.05f || _param_mc_airmode.get() == (int32_t)Mixer::Airmode::roll_pitch_yaw) {
@@ -452,6 +452,13 @@ MulticopterAttitudeControl::generate_attitude_setpoint(float dt, bool reset_yaw_
 	Eulerf euler_sp = q_sp_rpy;
 	attitude_setpoint.roll_body = euler_sp(0);
 	attitude_setpoint.pitch_body = euler_sp(1);
+
+	// kitex overwrite pitch body setpoint; use param as setpoint instead
+	if (_param_mc_pitch_c_en.get()) {
+		attitude_setpoint.pitch_body = _param_mc_pitch_c.get();
+	}
+	// end kitex
+
 	// The axis angle can change the yaw as well (noticeable at higher tilt angles).
 	// This is the formula by how much the yaw changes:
 	//   let a := tilt angle, b := atan(y/x) (direction of maximum tilt)

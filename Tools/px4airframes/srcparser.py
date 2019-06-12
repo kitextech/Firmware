@@ -52,6 +52,9 @@ class ParameterGroup(object):
             return "OctoRotorX"
         elif (self.name == "Octorotor Coaxial"):
             return "OctoRotorXCoaxial"
+# kitex < this is for Qground control to identify the airframe in the compiled firmware >
+        elif (self.name == "Octorotor h"):
+            return "OctoRotorH"
         elif (self.name == "Octo Coax Wide"):
             return "OctoRotorXCoaxial"
         elif (self.name == "Quadrotor Wide"):

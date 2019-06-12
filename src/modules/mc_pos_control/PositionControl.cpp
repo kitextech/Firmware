@@ -181,6 +181,13 @@ bool PositionControl::_interfaceMapping()
 		_vel_dot(2) = 0.0f;
 	}
 
+	// kitex diable yaw
+	if (!_param_mc_yaw_en.get()) {
+		_yawspeed_sp = NAN;
+		_yaw_sp = NAN;
+	}
+	// kitex disable yaw end
+
 	if (!PX4_ISFINITE(_yawspeed_sp)) {
 		// Set the yawspeed to 0 since not used.
 		_yawspeed_sp = 0.0f;
@@ -214,10 +221,28 @@ bool PositionControl::_interfaceMapping()
 
 void PositionControl::_positionController()
 {
-	// P-position controller
-	const Vector3f vel_sp_position = (_pos_sp - _pos).emult(Vector3f(_param_mpc_xy_p.get(), _param_mpc_xy_p.get(),
-					 _param_mpc_z_p.get()));
-	_vel_sp = vel_sp_position + _vel_sp;
+	// kitex begin
+	Vector3f vel_sp_position;
+	if (_param_mpc_sphere_en.get()) { 	// kitex
+		const Vector3f b = Vector3f(_param_mpc_x_pos_b.get(), _param_mpc_y_pos_b.get(), _param_mpc_z_pos_b.get());
+		const Vector3f bk =  (_pos - b);
+		const Vector3f ksp = (_pos_sp - _pos);
+		const Vector3f bk_unit = bk.unit();
+		const Vector3f ksp_corrected= ksp-(ksp*bk_unit)*bk_unit;
+		// P-position controller
+		vel_sp_position = ksp_corrected.emult(Vector3f(_param_mpc_xy_p.get(), _param_mpc_xy_p.get(), _param_mpc_z_p.get()));
+
+		_vel_sp = vel_sp_position + _vel_sp;
+		_vel_sp = _vel_sp - (_vel_sp*bk_unit)*bk_unit;
+	} else {
+		// P-position controller
+		vel_sp_position = (_pos_sp - _pos).emult(Vector3f(_param_mpc_xy_p.get(), _param_mpc_xy_p.get(),
+						 _param_mpc_z_p.get()));
+		_vel_sp = vel_sp_position + _vel_sp;
+	}
+	// kitex end
+
+
 
 	// Constrain horizontal velocity by prioritizing the velocity component along the
 	// the desired position setpoint over the feed-forward term.
@@ -283,6 +308,18 @@ void PositionControl::_velocityController(const float &dt)
 	_thr_sp(2) = math::constrain(thrust_desired_D, uMin, uMax);
 
 	if (PX4_ISFINITE(_thr_sp(0)) && PX4_ISFINITE(_thr_sp(1))) {
+
+		// Kitex constant forward force.
+		// rotate _thr_sp into local coordinate system
+		if (_param_mpc_thrust_f_en.get()) {
+			Vector3f v_r = Vector3f(Dcmf(Eulerf(0.0f, 0.0f, -_yaw)) * Vector3f(_thr_sp(0), _thr_sp(1), 0.0f)); // unsure about +- yaw
+      v_r(0) = _param_mpc_thrust_f.get();
+			v_r = Vector3f(Dcmf(Eulerf(0.0f, 0.0f, _yaw)) * Vector3f(v_r(0), v_r(1), 0.0f));
+			_thr_sp(0) = v_r(0);
+			_thr_sp(1) = v_r(1);
+		}
+		// kitex constant forward force end
+
 		// Thrust set-point in NE-direction is already provided. Only
 		// scaling by the maximum tilt is required.
 		float thr_xy_max = fabsf(_thr_sp(2)) * tanf(_constraints.tilt);
