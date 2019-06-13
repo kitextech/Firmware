@@ -112,8 +112,8 @@ mavlink_hil_actuator_controls_t Simulator::actuator_controls_from_outputs(const 
 			break;
 
 		case MAV_TYPE_VTOL_RESERVED2:
-			// this is the standard VTOL / quad plane with 5 propellers
-			n = 5;
+			// this is the kitex special modification for the VTOL
+ 			param_get(param_find("VT_MOT_COUNT"),&n);//8 rotors because we did it in the posix file
 			break;
 
 		case MAV_TYPE_HEXAROTOR:

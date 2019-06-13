@@ -1,0 +1,2 @@
+
+mixer append /dev/pwm_output0 etc/mixers/KX4.aux.mix

@@ -37,4 +37,6 @@ px4_add_romfs_files(
 	over_sitl.main.mix
 	standard_vtol_sitl.main.mix
 	tiltrotor_sitl.main.mix
+	kx4_vtol.main.mix # Kitex
+	kx4_vtol_with_tether.main.mix # Kitex
 )

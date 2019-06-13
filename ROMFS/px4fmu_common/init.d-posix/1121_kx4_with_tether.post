@@ -1,0 +1,1 @@
+mixer append /dev/pwm_output0 etc/mixers/KX4_with_tether.aux.mix
