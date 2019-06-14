@@ -84,7 +84,8 @@ enum mode {
 enum vtol_type {
 	TAILSITTER = 0,
 	TILTROTOR,
-	STANDARD
+	STANDARD,
+	KITE
 };
 
 // these are states that can be applied to a selection of multirotor motors.
