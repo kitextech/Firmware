@@ -93,7 +93,7 @@ then
 	param set SENS_BOARD_X_OFF 0.000001
 	param set SENS_DPRES_OFF 0.001
 
-	param set SYS_AUTOSTART 13013
+	param set SYS_AUTOSTART 1121
 	param set SYS_MC_EST_GROUP 2
 	param set SYS_RESTART_TYPE 2
 

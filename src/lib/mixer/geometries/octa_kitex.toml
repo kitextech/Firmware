@@ -1,51 +1,51 @@
-# KX4 special mixer
+# Generic Octacopter in X configuration
 
 [info]
 key = "8kitex"
-description = "Kitex Octa-special configuration"
+description = "Generic Octacopter in X configuration"
 
 [rotor_default]
+direction = "CW"
 axis      = [0.0, 0.0, -1.0]
 Ct        = 1.0
 Cm        = 0.05
-direction = "CW"
 
 [[rotors]]
-name      = "front_right"
-position  = [-0.62, -0.31, 0.0] # rotor 3
+name      = "ROTOR 1"
+position  = [0.485,-0.6, 0.0]
 direction = "CCW"
 
 [[rotors]]
-name      = "mid_front_right" # rotor 2
-position  = [0.31, -0.31, 0.0]
+name      = "ROTOR 2"
+position  = [0.221,-0.6, 0.0]
 direction = "CW"
 
 [[rotors]]
-name      = "mid_rear_right" # rotor 1
-position  = [-0.31, -0.31, 0.0]
+name      = "ROTOR 3"
+position  = [-0.221, -0.6, 0.0]
 direction = "CW"
 
 [[rotors]]
-name      = "rear_right"  # rotor 0
-position  = [-0.62, -0.31, 0.0]
+name      = "ROTOR 4"
+position  = [-0.485, -0.6, 0.0]
 direction = "CCW"
 
 [[rotors]]
-name      = "front_left"  # rotor 5
-position  = [0.62, 0.31, 0.0]
+name      = "ROTOR 5"
+position  = [0.485,0.6,0.0]
 direction = "CW"
 
 [[rotors]]
-name      = "mid_front_left" # rotor 6
-position  = [0.31, 0.31, 0.0]
+name      = "ROTOR 6"
+position  = [ 0.221,0.6, 0.0]
 direction = "CCW"
 
 [[rotors]]
-name      = "mid_rear_left"  # rotor 7
-position  = [-0.31, 0.31, 0.0]
+name      = "ROTOR 7"
+position  = [-0.221,0.6, 0.0]
 direction = "CCW"
 
 [[rotors]]
-name      = "rear_left"  # rotor 8
-position  = [-0.62, 0.31, 0.0]
+name      = "ROTOR 8"
+position  = [-0.485,0.6, 0.0]
 direction = "CW"

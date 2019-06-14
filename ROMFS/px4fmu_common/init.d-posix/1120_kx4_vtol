@@ -83,7 +83,7 @@ then
 	param set VT_IDLE_PWM_MC  1080
 	# type of the vtol
 	# 3 is KITE
-	param set VT_TYPE 3
+	param set VT_TYPE 2
 
 	param set RTL_DESCEND_ALT 10.0
 	param set RTL_LAND_DELAY 0
@@ -93,7 +93,7 @@ then
 	param set SENS_BOARD_X_OFF 0.000001
 	param set SENS_DPRES_OFF 0.001
 
-	param set SYS_AUTOSTART 13013
+	param set SYS_AUTOSTART 1120
 	param set SYS_MC_EST_GROUP 2
 	param set SYS_RESTART_TYPE 2
 
