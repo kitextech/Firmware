@@ -88,6 +88,7 @@ px4_add_board(
 		vmount
 		vtol_att_control
 		wind_estimator
+		adc_monitor # kitex
 
 	SYSTEMCMDS
 		bl_update
