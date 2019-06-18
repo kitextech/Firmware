@@ -33,10 +33,12 @@
  ****************************************************************************/
 
 /**
- * @file hello_example.cpp
- * Example for Linux
+ * @file adc_monitor.cpp
+ * Temperature monitoring module which takes channel 7 from adc_report topic
+ * which senses the temperature of the bcm and links it to the debug_key_value topic.
+ * The topic is connected to the NAMED_VALUE_FLOAT MAVLink common message which is accessable in QGroundControl
  *
- * @author Mark Charlebois <charlebm@gmail.com> added content by BERCI
+ * @author Bertalan Kovács <bertalan@kitex.tech>
  */
 
 #include "adc_monitor.h"

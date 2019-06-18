@@ -32,10 +32,12 @@
  ****************************************************************************/
 
 /**
- * @file hello_example.h
- * Example app for Linux
+ * @file adc_monitor.h
+ * Temperature monitoring module which takes channel 7 from adc_report topic
+ * which senses the temperature of the bcm and links it to the debug_key_value topic.
+ * The topic is connected to the NAMED_VALUE_FLOAT MAVLink common message which is accessable in QGroundControl
  *
- * @author Mark Charlebois <charlebm@gmail.com>
+ * @author Bertalan Kovács <bertalan@kitex.tech>
  */
 
 #pragma once
@@ -51,7 +53,7 @@ public:
 
 private:
 
-	bool		_task_should_exit{false};		/**< if true, attitude control task should exit */
+	bool		_task_should_exit{false};		/**< if true, adc monitor task should exit */
 	bool		_task_running{false};			/**< if true, task is running in its mainloop */
 	int		_control_task{-1};			/**< task handle */
 
