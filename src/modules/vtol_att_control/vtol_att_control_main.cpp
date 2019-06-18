@@ -1,4 +1,4 @@
-/****************************************************************************
+P		/****************************************************************************
  *
  *   Copyright (c) 2013 - 2017 PX4 Development Team. All rights reserved.
  *
@@ -150,7 +150,7 @@ VtolAttitudeControl::VtolAttitudeControl()
  * @author Andreas Okholm   <bapstroman@gmail.com>
  */
 
-#include <systemlib/param/param.h>
+#include <parameters/param.h>
 
 /**
  * Transition forward to FW mode roll target
