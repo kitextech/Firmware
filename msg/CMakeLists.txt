@@ -29,6 +29,8 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
+# Kitex: Added fw_turning.msg
+#
 ############################################################################
 
 set(msg_files
@@ -59,6 +61,7 @@ set(msg_files
 	esc_status.msg
 	estimator_status.msg
 	follow_target.msg
+	fw_turning.msg
 	geofence_result.msg
 	gps_dump.msg
 	gps_inject_data.msg

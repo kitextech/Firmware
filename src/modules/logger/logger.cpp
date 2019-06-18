@@ -714,6 +714,7 @@ void Logger::add_estimator_replay_topics()
 	add_topic("vehicle_magnetometer");
 	add_topic("vehicle_status");
 	add_topic("vehicle_visual_odometry");
+	add_topic("fw_turning", 100);	// Kitex
 }
 
 void Logger::add_thermal_calibration_topics()

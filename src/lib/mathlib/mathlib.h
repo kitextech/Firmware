@@ -46,4 +46,6 @@
 #include "math/matrix_alg.h"
 #include "math/SearchMin.hpp"
 
+// #include "math/Vector.hpp"  // Kitex
+
 #endif

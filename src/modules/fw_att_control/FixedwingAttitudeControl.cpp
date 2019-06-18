@@ -55,6 +55,23 @@ FixedwingAttitudeControl::FixedwingAttitudeControl() :
 	// check if VTOL first
 	vehicle_status_poll();
 
+	// Kitex begin
+	_vel_pi.zero();	// The velocity in the projected pi plane?
+	_pos_pi.zero();	// The position in the projected pi plane?
+
+	_parameters.pos_c.zero(); 	// is this needed?
+	_parameters.e_pi_x.zero();
+	_parameters.e_pi_y.zero();
+
+	_parameter_handles.phiC			= param_find("MPC_PHI_C");
+	_parameter_handles.thetaC		= param_find("MPC_THETA_C");
+	_parameter_handles.turning_radius	= param_find("MPC_LOOP_TURN_R");
+
+	_parameter_handles.x_pos_b		= param_find("MPC_X_POS_B");
+	_parameter_handles.y_pos_b		= param_find("MPC_Y_POS_B");
+	_parameter_handles.z_pos_b		= param_find("MPC_Z_POS_B");
+	// Kitex end
+
 	_parameter_handles.p_tc = param_find("FW_P_TC");
 	_parameter_handles.p_p = param_find("FW_PR_P");
 	_parameter_handles.p_i = param_find("FW_PR_I");
@@ -137,6 +154,7 @@ FixedwingAttitudeControl::FixedwingAttitudeControl() :
 	_vcontrol_mode_sub = orb_subscribe(ORB_ID(vehicle_control_mode));
 	_params_sub = orb_subscribe(ORB_ID(parameter_update));
 	_manual_sub = orb_subscribe(ORB_ID(manual_control_setpoint));
+	_local_pos_sub = orb_subscribe(ORB_ID(vehicle_local_position));	// Kitex
 	_global_pos_sub = orb_subscribe(ORB_ID(vehicle_global_position));
 	_vehicle_status_sub = orb_subscribe(ORB_ID(vehicle_status));
 	_vehicle_land_detected_sub = orb_subscribe(ORB_ID(vehicle_land_detected));
@@ -151,6 +169,7 @@ FixedwingAttitudeControl::~FixedwingAttitudeControl()
 	orb_unsubscribe(_vcontrol_mode_sub);
 	orb_unsubscribe(_params_sub);
 	orb_unsubscribe(_manual_sub);
+	orb_unsubscribe(_local_pos_sub);	// Kitex
 	orb_unsubscribe(_global_pos_sub);
 	orb_unsubscribe(_vehicle_status_sub);
 	orb_unsubscribe(_vehicle_land_detected_sub);
@@ -165,6 +184,18 @@ FixedwingAttitudeControl::~FixedwingAttitudeControl()
 int
 FixedwingAttitudeControl::parameters_update()
 {
+	// Kitex begin
+	/* Controlling C for looping */
+	// Is this where we get the parameters necessary for making the projection plane? (Mathias)
+	param_get(_parameter_handles.phiC, &_parameters.phiC);
+	param_get(_parameter_handles.thetaC, &_parameters.thetaC);
+	param_get(_parameter_handles.turning_radius, &_parameters.turning_radius);
+
+	param_get(_parameter_handles.x_pos_b, &_parameters.pos_b(0));
+	param_get(_parameter_handles.y_pos_b, &_parameters.pos_b(1));
+	param_get(_parameter_handles.z_pos_b, &_parameters.pos_b(2));
+	// Kitex end
+
 	int32_t tmp = 0;
 	param_get(_parameter_handles.p_tc, &(_parameters.p_tc));
 	param_get(_parameter_handles.p_p, &(_parameters.p_p));
@@ -245,6 +276,12 @@ FixedwingAttitudeControl::parameters_update()
 
 	param_get(_parameter_handles.airspeed_mode, &tmp);
 	_parameters.airspeed_disabled = (tmp == 1);
+
+	// Kitex begin
+	// Update projection plane and path
+	update_pi(_parameters.phiC, _parameters.thetaC);
+	update_pi_path(_parameters.turning_radius);
+	// Kitex end
 
 	/* pitch control parameters */
 	_pitch_ctrl.set_time_constant(_parameters.p_tc);
@@ -375,6 +412,25 @@ FixedwingAttitudeControl::vehicle_manual_poll()
 	}
 }
 
+// Kitex begin
+void
+FixedwingAttitudeControl::local_pos_poll()
+{
+	bool updated;
+	orb_check(_local_pos_sub, &updated);
+
+	if (updated) {
+		orb_copy(ORB_ID(vehicle_local_position), _local_pos_sub, &_local_pos);
+		_pos(0) = _local_pos.x;
+		_pos(1) = _local_pos.y;
+		_pos(2) = _local_pos.z;
+		_vel(0) = _local_pos.vx;
+		_vel(1) = _local_pos.vy;
+		_vel(2) = _local_pos.vz;
+	}
+}
+// Kitex end
+
 void
 FixedwingAttitudeControl::vehicle_attitude_setpoint_poll()
 {
@@ -447,9 +503,22 @@ FixedwingAttitudeControl::vehicle_status_poll()
 				_actuators_id = ORB_ID(actuator_controls_0);
 				_attitude_setpoint_id = ORB_ID(vehicle_attitude_setpoint);
 			}
+			_fw_turning_sp_id = ORB_ID(fw_turning); // Kitex
 		}
 	}
 }
+
+// Kitex begin
+// This is run when in a loop
+void FixedwingAttitudeControl::control_looping(float dt)
+{
+	update_pi_projection();
+	update_pi_target_point(0.8f * _parameters.turning_radius);
+	update_pi_arc();
+	update_pi_roll_rate();
+}
+// Kitex end
+
 
 void
 FixedwingAttitudeControl::vehicle_land_detected_poll()
@@ -559,6 +628,8 @@ void FixedwingAttitudeControl::run()
 				deltaT = 0.01f;
 			}
 
+			control_looping(deltaT); // KiteX
+
 			/* load local copies */
 			orb_copy(ORB_ID(vehicle_attitude), _att_sub, &_att);
 
@@ -613,6 +684,7 @@ void FixedwingAttitudeControl::run()
 			vehicle_attitude_setpoint_poll();
 			vehicle_control_mode_poll();
 			vehicle_manual_poll();
+			local_pos_poll();	// Kitex
 			global_pos_poll();
 			vehicle_status_poll();
 			vehicle_land_detected_poll();
@@ -623,6 +695,8 @@ void FixedwingAttitudeControl::run()
 
 			/* lock integrator until control is started */
 			bool lock_integrator = !_vcontrol_mode.flag_control_rates_enabled || _vehicle_status.is_rotary_wing;
+
+			bool manual_overwrite = fabsf(_manual.y) > 0.2f || fabsf(_manual.x) > 0.2f; // Kitex
 
 			/* Simple handling of failsafe: deploy parachute if failsafe is on */
 			if (_vcontrol_mode.flag_control_termination_enabled) {
@@ -637,10 +711,11 @@ void FixedwingAttitudeControl::run()
 				continue;
 			}
 
-			control_flaps(deltaT);
+			// control_flaps(deltaT);	// Kitex, commented out
 
 			/* decide if in stabilized or full manual control */
-			if (_vcontrol_mode.flag_control_rates_enabled) {
+			if (!manual_overwrite) {	// Kitex
+			// if (_vcontrol_mode.flag_control_rates_enabled) {
 
 				const float airspeed = get_airspeed_and_update_scaling();
 
@@ -840,24 +915,26 @@ void FixedwingAttitudeControl::run()
 						_rate_sp_pub = orb_advertise(ORB_ID(vehicle_rates_setpoint), &_rates_sp);
 					}
 
-				} else {
-					vehicle_rates_setpoint_poll();
-
-					_roll_ctrl.set_bodyrate_setpoint(_rates_sp.roll);
-					_yaw_ctrl.set_bodyrate_setpoint(_rates_sp.yaw);
-					_pitch_ctrl.set_bodyrate_setpoint(_rates_sp.pitch);
+				// Kitex begin. Pure rate control
+				// } else {
+					// vehicle_rates_setpoint_poll();
+					_roll_ctrl.set_bodyrate_setpoint(_arc_roll_rate);	// Kitex
+					// _roll_ctrl.set_bodyrate_setpoint(_rates_sp.roll);
+					// _yaw_ctrl.set_bodyrate_setpoint(_rates_sp.yaw);
+					// _pitch_ctrl.set_bodyrate_setpoint(_rates_sp.pitch);
 
 					float roll_u = _roll_ctrl.control_bodyrate(control_input);
-					_actuators.control[actuator_controls_s::INDEX_ROLL] = (PX4_ISFINITE(roll_u)) ? roll_u + trim_roll : trim_roll;
+					_actuators.control[actuator_controls_s::INDEX_ROLL] = (PX4_ISFINITE(roll_u)) ? roll_u : 0.0f;
 
-					float pitch_u = _pitch_ctrl.control_bodyrate(control_input);
-					_actuators.control[actuator_controls_s::INDEX_PITCH] = (PX4_ISFINITE(pitch_u)) ? pitch_u + trim_pitch : trim_pitch;
+					// float pitch_u = _pitch_ctrl.control_bodyrate(control_input);
+					_actuators.control[actuator_controls_s::INDEX_PITCH] = 0.0f;
+					// float yaw_u = _yaw_ctrl.control_bodyrate(control_input);
+					_actuators.control[actuator_controls_s::INDEX_YAW] = 0.0f;
 
-					float yaw_u = _yaw_ctrl.control_bodyrate(control_input);
-					_actuators.control[actuator_controls_s::INDEX_YAW] = (PX4_ISFINITE(yaw_u)) ? yaw_u + trim_yaw : trim_yaw;
-
-					_actuators.control[actuator_controls_s::INDEX_THROTTLE] = PX4_ISFINITE(_rates_sp.thrust_body[0]) ?
-							_rates_sp.thrust_body[0] : 0.0f;
+					_actuators.control[actuator_controls_s::INDEX_THROTTLE] = _manual.z;
+					// _actuators.control[actuator_controls_s::INDEX_THROTTLE] = PX4_ISFINITE(_rates_sp.thrust_body[0]) ?
+							// _rates_sp.thrust_body[0] : 0.0f;
+					// Kitex end
 				}
 
 				rate_ctrl_status_s rate_ctrl_status;
@@ -872,7 +949,13 @@ void FixedwingAttitudeControl::run()
 
 				int instance;
 				orb_publish_auto(ORB_ID(rate_ctrl_status), &_rate_ctrl_status_pub, &rate_ctrl_status, &instance, ORB_PRIO_DEFAULT);
-			}
+			} else {	// Kitex begin
+				/* manual/direct control */
+				_actuators.control[actuator_controls_s::INDEX_ROLL] = _manual.y * _parameters.man_roll_scale + _parameters.trim_roll;
+				_actuators.control[actuator_controls_s::INDEX_PITCH] = -_manual.x * _parameters.man_pitch_scale + _parameters.trim_pitch;
+				_actuators.control[actuator_controls_s::INDEX_YAW] = _manual.r * _parameters.man_yaw_scale + _parameters.trim_yaw;
+				_actuators.control[actuator_controls_s::INDEX_THROTTLE] = _manual.z;
+			}	// Kitex end
 
 			// Add feed-forward from roll control output to yaw control output
 			// This can be used to counteract the adverse yaw effect when rolling the plane
@@ -1037,3 +1120,82 @@ int fw_att_control_main(int argc, char *argv[])
 {
 	return FixedwingAttitudeControl::main(argc, argv);
 }
+
+// Kitex begin
+// KiteX: Run when the angles for C change
+void FixedwingAttitudeControl::update_pi(float phi, float theta)
+{
+	_parameters.e_pi_x(0) = -sinf(phi);
+	_parameters.e_pi_x(1) = cosf(phi);
+	_parameters.e_pi_x(2) = 0;
+
+	_parameters.e_pi_y(0) = -cosf(phi)*sinf(theta);
+	_parameters.e_pi_y(1) = -sinf(phi)*sinf(theta);
+	_parameters.e_pi_y(2) = -cosf(theta);
+}
+
+// KiteX: Run when the turning radius changes
+void FixedwingAttitudeControl::update_pi_path(float radius)
+{
+	float offset = (float) M_PI_2; // index 0 at bottom of circle
+	for (int i = 0; i < 60; i++) {
+		float rho = i*2*M_PI/60;
+		_pi_path_x[i] = radius*cosf(rho + offset);
+		_pi_path_y[i] = -radius*sinf(rho + offset);
+	}
+}
+
+// KiteX: Run when position changes
+void FixedwingAttitudeControl::update_pi_projection()
+{
+	matrix::Vector<float, 3> relative_pos = _pos - _parameters.pos_b; // _parameters.pos_b should really be C, but it doesn't matter since B anc C is along PI (Z)
+	_pos_pi(0) = relative_pos*_parameters.e_pi_x;
+	_pos_pi(1) = relative_pos*_parameters.e_pi_y;
+
+	_vel_pi(0) = _vel*_parameters.e_pi_x;
+	_vel_pi(1) = _vel*_parameters.e_pi_y;
+}
+
+void FixedwingAttitudeControl::update_pi_target_point(float search_radius)
+{
+	int index = _pi_path_i;
+
+	while ((double) square_distance_to_path(index) < pow(search_radius, 2)) {
+		index = (index + 1) % 60;
+	}
+
+	_pi_path_i = index;
+	_target_point_pi(0) = _pi_path_x[_pi_path_i];
+	_target_point_pi(1) = _pi_path_y[_pi_path_i];
+}
+
+void FixedwingAttitudeControl::update_pi_arc()
+{
+	matrix::Vector<float, 2> delta_pos = _target_point_pi - _pos_pi;
+	float _arc_angle = signed_angle(_vel_pi, delta_pos);
+	float factor = 1/sqrtf(2*(1 - cosf(2*_arc_angle))); // Could use a simple sin function
+	_arc_radius = copysignf(1.0f, _arc_angle)*factor*delta_pos.length();
+}
+
+void FixedwingAttitudeControl::update_pi_roll_rate()
+{
+	_arc_roll_rate = -_vel_pi.length()/_arc_radius;
+}
+
+// KiteX: Pure helper functions
+float FixedwingAttitudeControl::signed_angle(const matrix::Vector<float, 2> &left, const matrix::Vector<float, 2> &right)
+{
+	const matrix::Vector<float, 2> e_x = left.normalized();
+	matrix::Vector<float, 2> e_y;
+	// std::cout << e_y(0) << " " << e_y(1) << std::endl;
+	e_y(0) = -e_x(1);
+	e_y(1) = e_x(0);
+
+	return atan2f(right*e_y, right*e_x);
+}
+
+float FixedwingAttitudeControl::square_distance_to_path(const int path_i)
+{
+	return pow(_pos_pi(0) - _pi_path_x[path_i], 2) + pow(_pos_pi(1) - _pi_path_y[path_i], 2);
+}
+// Kitex end
