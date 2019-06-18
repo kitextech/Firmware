@@ -60,6 +60,17 @@
 #include <uORB/topics/vehicle_land_detected.h>
 #include <uORB/topics/vehicle_rates_setpoint.h>
 #include <uORB/topics/vehicle_status.h>
+// Kitex implementation for the new needed headers
+#include <uORB/topics/fw_turning.h>
+/**
+This is the message including all the data we need for the pure persuit algorithm
+*/
+#include <uORB/topics/vehicle_local_position.h>
+/**
+
+The local position is in NED Coordinate system so basically the algorithm is working in the same coordinate system
+*/
+// Kitex end
 
 using matrix::Eulerf;
 using matrix::Quatf;
@@ -97,20 +108,23 @@ private:
 	int		_rates_sp_sub{-1};			/**< vehicle rates setpoint */
 	int		_battery_status_sub{-1};		/**< battery status subscription */
 	int		_global_pos_sub{-1};			/**< global position subscription */
+	int		_local_pos_sub;				/**< vehicle local position */ // KITEX
 	int		_manual_sub{-1};			/**< notification of manual control updates */
 	int		_params_sub{-1};			/**< notification of parameter updates */
 	int		_vcontrol_mode_sub{-1};			/**< vehicle status subscription */
 	int		_vehicle_land_detected_sub{-1};		/**< vehicle land detected subscription */
 	int		_vehicle_status_sub{-1};		/**< vehicle status subscription */
 
-	orb_advert_t	_rate_sp_pub{nullptr};			/**< rate setpoint publication */
-	orb_advert_t	_attitude_sp_pub{nullptr};		/**< attitude setpoint point */
-	orb_advert_t	_actuators_0_pub{nullptr};		/**< actuator control group 0 setpoint */
-	orb_advert_t	_actuators_2_pub{nullptr};		/**< actuator control group 1 setpoint (Airframe) */
+	orb_advert_t	_rate_sp_pub{nullptr};			      /**< rate setpoint publication */
+	orb_advert_t	_attitude_sp_pub{nullptr};		    /**< attitude setpoint point */
+	orb_advert_t	_actuators_0_pub{nullptr};		    /**< actuator control group 0 setpoint */
+	orb_advert_t	_actuators_2_pub{nullptr};		    /**< actuator control group 1 setpoint (Airframe) */
 	orb_advert_t	_rate_ctrl_status_pub{nullptr};		/**< rate controller status publication */
+	orb_advert_t	_fw_turning_sp_pub; 			        /**  KITEX */
 
-	orb_id_t _actuators_id{nullptr};	// pointer to correct actuator controls0 uORB metadata structure
-	orb_id_t _attitude_setpoint_id{nullptr};
+	orb_id_t  _actuators_id{nullptr};	        // pointer to correct actuator controls0 uORB metadata structure
+	orb_id_t  _attitude_setpoint_id{nullptr};
+	orb_id_t  _fw_turning_sp_id{nullptr};    /**  KITEX */
 
 	actuator_controls_s			_actuators {};		/**< actuator control inputs */
 	actuator_controls_s			_actuators_airframe {};	/**< actuator control inputs */
@@ -118,7 +132,10 @@ private:
 	vehicle_attitude_s			_att {};		/**< vehicle attitude setpoint */
 	vehicle_attitude_setpoint_s		_att_sp {};		/**< vehicle attitude setpoint */
 	vehicle_control_mode_s			_vcontrol_mode {};	/**< vehicle control mode */
+	fw_turning_s 				        _fw_turning_sp {}; 	// KITEX
+
 	vehicle_global_position_s		_global_pos {};		/**< global position */
+	vehicle_local_position_s		_local_pos {};		/**< vehicle local position */ //KITEX
 	vehicle_rates_setpoint_s		_rates_sp {};		/* attitude rates setpoint */
 	vehicle_status_s			_vehicle_status {};	/**< vehicle status */
 
@@ -142,6 +159,19 @@ private:
 	bool _is_tailsitter{false};
 
 	struct {
+		/** Kitex */
+
+		matrix::Vector<float , 3> pos_c;
+		matrix::Vector<float , 3> e_pi_x;
+		matrix::Vector<float , 3> e_pi_y;
+		matrix::Vector<float , 3> pos_b;
+
+		float phiC;
+		float thetaC;
+		float turning_radius;
+
+    // end Kitex
+
 		float p_tc;
 		float p_p;
 		float p_i;
@@ -211,7 +241,14 @@ private:
 	} _parameters{};			/**< local copies of interesting parameters */
 
 	struct {
-
+    /** Kitex */
+		param_t phiC;
+		param_t thetaC;
+		param_t turning_radius;
+		param_t x_pos_b;
+		param_t y_pos_b;
+		param_t z_pos_b;
+    // kitex end
 		param_t p_tc;
 		param_t p_p;
 		param_t p_i;
@@ -278,6 +315,20 @@ private:
 
 	} _parameter_handles{};		/**< handles for interesting parameters */
 
+
+    /** kitex */
+	  matrix::Vector<float ,3> _pos; // local position
+		matrix::Vector<float ,3> _vel; // local velocity
+		float _pi_path_x[60]; // x-coords of path points
+		float _pi_path_y[60]; // y-coords of path points
+		int   _pi_path_i = 0;   // Path of kite in Pi plane
+		matrix::Vector<float ,2> _pos_pi; // Projected position in Pi
+		matrix::Vector<float ,2> _vel_pi; // Projected velocity vector in Pi
+		matrix::Vector<float ,2> _target_point_pi; // Target point on path
+		float _arc_radius = 100000000.0f; // Radius of path
+		float _arc_roll_rate = 0.0f; // Yaw rate to reach path
+		// kitex
+
 	ECL_RollController				_roll_ctrl;
 	ECL_PitchController				_pitch_ctrl;
 	ECL_YawController				_yaw_ctrl;
@@ -285,12 +336,27 @@ private:
 
 	void control_flaps(const float dt);
 
+  /** kitex */
+	void update_pi(float phi, float theta);
+	void update_pi_path(float radius);
+	void update_pi_projection();
+	void update_pi_target_point(float search_radius);
+	void update_pi_arc();
+	void update_pi_roll_rate();
+	void control_looping(float dt);
+	// KiteX pure helpers
+	float signed_angle(const matrix::Vector<float ,2> &left, const matrix::Vector<float ,2> &right);
+	float square_distance_to_path(const int path_i);
+  /** kitex */
+
+
 	/**
 	 * Update our local parameter cache.
 	 */
 	int		parameters_update();
 
 	void		vehicle_control_mode_poll();
+	void		local_pos_poll();		// Kitex
 	void		vehicle_manual_poll();
 	void		vehicle_attitude_setpoint_poll();
 	void		vehicle_rates_setpoint_poll();

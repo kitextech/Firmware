@@ -150,7 +150,7 @@ VtolAttitudeControl::VtolAttitudeControl()
  * @author Andreas Okholm   <bapstroman@gmail.com>
  */
 
-#include <systemlib/param/param.h>
+#include <parameters/param.h>
 
 /**
  * Transition forward to FW mode roll target
@@ -558,6 +558,29 @@ VtolAttitudeControl::abort_front_transition(const char *reason)
 	}
 }
 
+
+/** Kitex
+* Do poll
+*/
+void
+VtolAttitudeControl::do_poll(){
+	land_detected_poll();
+	tecs_status_poll();
+	vehicle_attitude_poll();  //Check for attitude updates.
+	vehicle_cmd_poll();
+	vehicle_control_mode_poll();	//Check for changes in vehicle control mode.
+	vehicle_manual_poll();			//Check for changes in manual inputs.
+	actuator_controls_fw_poll();	//Check for changes in fw_attitude_control output
+	actuator_controls_mc_poll();	//Check for changes in mc_attitude_control output
+	fw_virtual_att_sp_poll();
+	mc_virtual_att_sp_poll();
+	pos_sp_triplet_poll();		// Check for changes in position setpoint values
+	vehicle_airspeed_poll();		// Check for changes in airspeed
+	vehicle_local_pos_poll();		// Check for changes in sensor values
+	vehicle_local_pos_sp_poll();		// Check for changes in setpoint values
+}
+
+
 /**
 * Update parameters.
 */
@@ -730,19 +753,19 @@ void VtolAttitudeControl::task_main()
 			continue;
 		}
 
-		vehicle_control_mode_poll();
-		vehicle_manual_poll();
-		vehicle_attitude_poll();
-		vehicle_local_pos_poll();
-		vehicle_local_pos_sp_poll();
-		pos_sp_triplet_poll();
-		vehicle_airspeed_poll();
-		vehicle_cmd_poll();
-		tecs_status_poll();
-		land_detected_poll();
-		actuator_controls_fw_poll();
-		actuator_controls_mc_poll();
-
+		// vehicle_control_mode_poll();
+		// vehicle_manual_poll();
+		// vehicle_attitude_poll();
+		// vehicle_local_pos_poll();
+		// vehicle_local_pos_sp_poll();
+		// pos_sp_triplet_poll();
+		// vehicle_airspeed_poll();
+		// vehicle_cmd_poll();
+		// tecs_status_poll();
+		// land_detected_poll();
+		// actuator_controls_fw_poll();
+		// actuator_controls_mc_poll();
+		do_poll();
 		// update the vtol state machine which decides which mode we are in
 		_vtol_type->update_vtol_state();
 
