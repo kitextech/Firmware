@@ -44,6 +44,8 @@
 
 #include "kite.h"
 #include "vtol_att_control_main.h"
+#include <iostream>
+
 using namespace matrix;
 
 Kite::Kite(VtolAttitudeControl *attc) :
@@ -61,6 +63,7 @@ Kite::Kite(VtolAttitudeControl *attc) :
 
 	_params_handles_kite.airspeed_trans = param_find("VT_ARSP_TRANS");
 	_params_handles_kite.trans_forward_roll = param_find("VT_T_F_ROLL");
+
 	_params_handles_kite.trans_forward_thrust = param_find("VT_T_F_THRUST");
 	_params_handles_kite.trans_forward_pitch = param_find("VT_T_F_PITCH");
 	_params_handles_kite.trans_forward_duration_max = param_find("VT_T_F_DUR_MAX"); // not currently in use
@@ -68,7 +71,7 @@ Kite::Kite(VtolAttitudeControl *attc) :
 	_params_handles_kite.trans_backwards_roll = param_find("VT_T_B_ROLL");
 	_params_handles_kite.trans_backwards_thrust = param_find("VT_T_B_THRUST");
 	_params_handles_kite.wind_speed = param_find("VT_WIND_SPEED");
-
+      
 	_params_handles_kite.x_pos_b		= param_find("MPC_X_POS_B"); // from MC_POS_CONTROL
 	_params_handles_kite.y_pos_b		= param_find("MPC_Y_POS_B");
 	_params_handles_kite.z_pos_b		= param_find("MPC_Z_POS_B");
@@ -172,6 +175,7 @@ void Kite::update_vtol_state()
 	} else if (_attc->is_fixed_wing_requested()) { // switchig to FW mode
 		switch (_vtol_schedule.flight_mode) {
 		case MC_MODE:
+ 			std::cout << "GEtting to the front transition ...!"<<std::endl;
 			// initialise a front transition
 			_vtol_schedule.flight_mode 	= TRANSITION_FRONT;
 			set_transition_starting_values(true);
@@ -283,8 +287,8 @@ void Kite::update_transition_state()
 
 		/** create time dependant pitch angle set point + 0.2 rad overlap over the switch value*/
 		_v_att_sp->yaw_body = heading; //_yaw_transition_start;
-		_v_att_sp->roll_body = (1.0f - t)*_roll_transition_start + t*_params_kite.trans_backwards_roll;
-		_v_att_sp->pitch_body = (1.0f - t)*_pitch_transition_start + t*_params_kite.trans_backwards_pitch;
+		_v_att_sp->roll_body = (1.0f - t)*_roll_transition_start        + t*_params_kite.trans_backwards_roll;
+		_v_att_sp->pitch_body = (1.0f - t)*_pitch_transition_start      + t*_params_kite.trans_backwards_pitch;
 		_v_att_sp->thrust_body[2] = (1.0f - t)*_thrust_transition_start + t*_params_kite.trans_backwards_thrust;
 	}
 
@@ -326,7 +330,7 @@ void Kite::set_transition_starting_values(bool forward)
 void Kite::update_transition_ratio()
 {
 	_transition_ratio = (float)hrt_elapsed_time(&_vtol_schedule.transition_start) / (_params->front_trans_time_min * 1000000.0f);
-	//printf("The transition ratio is : %.2f \n", (double) _transition_ratio);
+	printf("The transition ratio is : %.2f \n", (double) _transition_ratio);
 }
 
 void Kite::update_mc_state()

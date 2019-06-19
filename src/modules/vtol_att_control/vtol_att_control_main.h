@@ -112,8 +112,8 @@ public:
 	struct vehicle_attitude_setpoint_s 		*get_fw_virtual_att_sp() {return &_fw_virtual_att_sp;} //KITEX
 	struct vehicle_attitude_setpoint_s 		*get_mc_virtual_att_sp() {return &_mc_virtual_att_sp;} //KITEX
 
-	struct vehicle_rates_setpoint_s 		*get_fw_virtual_v_rates_sp() {return &_fw_virtual_v_rates_sp;} //Kitex
-	struct vehicle_rates_setpoint_s 		*get_mc_virtual_v_rates_sp() {return &_mc_virtual_v_rates_sp;} //Kitex
+	struct vehicle_rates_setpoint_s 		  *get_fw_virtual_v_rates_sp() {return &_fw_virtual_v_rates_sp;} //Kitex
+	struct vehicle_rates_setpoint_s 		  *get_mc_virtual_v_rates_sp() {return &_mc_virtual_v_rates_sp;} //Kitex
 
 	struct vehicle_control_mode_s 			*get_control_mode() {return &_v_control_mode;}
 	struct vehicle_land_detected_s			*get_land_detected() {return &_land_detected;}
