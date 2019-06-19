@@ -21,7 +21,7 @@ then
   param set VT_IDLE_PWM_MC  1080
 	# type of the vtol
 	# 3 is KITE
-	param set VT_TYPE 2
+	param set VT_TYPE 3
 	param set RTL_DESCEND_ALT 10.0
 	param set RTL_LAND_DELAY 0
   param set V19_VT_ROLLDIR 0

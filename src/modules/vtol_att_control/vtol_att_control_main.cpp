@@ -752,18 +752,7 @@ void VtolAttitudeControl::task_main()
 			continue;
 		}
 
-		vehicle_control_mode_poll();
-		vehicle_manual_poll();
-		vehicle_attitude_poll();
-		vehicle_local_pos_poll();
-		vehicle_local_pos_sp_poll();
-		pos_sp_triplet_poll();
-		vehicle_airspeed_poll();
-		vehicle_cmd_poll();
-		tecs_status_poll();
-		land_detected_poll();
-		actuator_controls_fw_poll();
-		actuator_controls_mc_poll();
+		do_poll();	// Kitex. Moved all polling to one function
 
 		// update the vtol state machine which decides which mode we are in
 		_vtol_type->update_vtol_state();

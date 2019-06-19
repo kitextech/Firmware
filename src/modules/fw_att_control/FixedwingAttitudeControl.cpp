@@ -920,7 +920,7 @@ void FixedwingAttitudeControl::run()
 
 				// Kitex begin. Pure rate control
 				// } else {
-					// vehicle_rates_setpoint_poll();
+					vehicle_rates_setpoint_poll();
 					_roll_ctrl.set_bodyrate_setpoint(_arc_roll_rate);	// Kitex
 					// _roll_ctrl.set_bodyrate_setpoint(_rates_sp.roll);
 					// _yaw_ctrl.set_bodyrate_setpoint(_rates_sp.yaw);
@@ -963,14 +963,16 @@ void FixedwingAttitudeControl::run()
 
 			// Add feed-forward from roll control output to yaw control output
 			// This can be used to counteract the adverse yaw effect when rolling the plane
-			_actuators.control[actuator_controls_s::INDEX_YAW] += _parameters.roll_to_yaw_ff * math::constrain(
-						_actuators.control[actuator_controls_s::INDEX_ROLL], -1.0f, 1.0f);
-
-			_actuators.control[actuator_controls_s::INDEX_FLAPS] = _flaps_applied;
-			_actuators.control[5] = _manual.aux1;
-			_actuators.control[actuator_controls_s::INDEX_AIRBRAKES] = _flaperons_applied;
-			// FIXME: this should use _vcontrol_mode.landing_gear_pos in the future
-			_actuators.control[7] = _manual.aux3;
+			// Kitex comment out, begin
+			// _actuators.control[actuator_controls_s::INDEX_YAW] += _parameters.roll_to_yaw_ff * math::constrain(
+			// 			_actuators.control[actuator_controls_s::INDEX_ROLL], -1.0f, 1.0f);
+			//
+			// _actuators.control[actuator_controls_s::INDEX_FLAPS] = _flaps_applied;
+			// _actuators.control[5] = _manual.aux1;
+			// _actuators.control[actuator_controls_s::INDEX_AIRBRAKES] = _flaperons_applied;
+			// // FIXME: this should use _vcontrol_mode.landing_gear_pos in the future
+			// _actuators.control[7] = _manual.aux3;
+			// Kitex comment out, end
 
 			/* lazily publish the setpoint only once available */
 			_actuators.timestamp = hrt_absolute_time();

@@ -42,6 +42,25 @@
          This part is the definition of the new B parameter in the kite (Tether)
  **/
 
+
+ /**
+ * KITEX Angles to C. Phi is relative to the X-axis, theta to the XY-plane, positive for negative z.
+ * *
+ * @group Multicopter Position Control
+ */
+
+ PARAM_DEFINE_FLOAT(MPC_PHI_C, 0f);
+ PARAM_DEFINE_FLOAT(MPC_THETA_C, 0.0f);
+
+ /**
+  * KITEX Turning radius in the Pi-plane
+  * *
+  * @group Multicopter Position Control
+  */
+
+ PARAM_DEFINE_FLOAT(MPC_LOOP_TURN_R, 0.0f);
+
+
  /**
   * Position of B in NED // KITEX
   *
@@ -105,7 +124,7 @@
   * @group Multicopter Position Control
   */
  PARAM_DEFINE_FLOAT(MPC_THRUST_F, 0.15f);
- 
+
  /**
   * Enable modified position controller to work on sphere // KITEX
   *
