@@ -790,111 +790,114 @@ void FixedwingAttitudeControl::run()
 
 				_flag_control_attitude_enabled_last = _vcontrol_mode.flag_control_attitude_enabled;
 
+				// Kitex comment out begin
 				/* bi-linear interpolation over airspeed for actuator trim scheduling */
-				float trim_roll = _parameters.trim_roll;
-				float trim_pitch = _parameters.trim_pitch;
-				float trim_yaw = _parameters.trim_yaw;
+				// float trim_roll = _parameters.trim_roll;
+				// float trim_pitch = _parameters.trim_pitch;
+				// float trim_yaw = _parameters.trim_yaw;
+				//
+				// if (airspeed < _parameters.airspeed_trim) {
+				// 	trim_roll += math::gradual(airspeed, _parameters.airspeed_min, _parameters.airspeed_trim, _parameters.dtrim_roll_vmin,
+				// 				   0.0f);
+				// 	trim_pitch += math::gradual(airspeed, _parameters.airspeed_min, _parameters.airspeed_trim, _parameters.dtrim_pitch_vmin,
+				// 				    0.0f);
+				// 	trim_yaw += math::gradual(airspeed, _parameters.airspeed_min, _parameters.airspeed_trim, _parameters.dtrim_yaw_vmin,
+				// 				  0.0f);
+				//
+				// } else {
+				// 	trim_roll += math::gradual(airspeed, _parameters.airspeed_trim, _parameters.airspeed_max, 0.0f,
+				// 				   _parameters.dtrim_roll_vmax);
+				// 	trim_pitch += math::gradual(airspeed, _parameters.airspeed_trim, _parameters.airspeed_max, 0.0f,
+				// 				    _parameters.dtrim_pitch_vmax);
+				// 	trim_yaw += math::gradual(airspeed, _parameters.airspeed_trim, _parameters.airspeed_max, 0.0f,
+				// 				  _parameters.dtrim_yaw_vmax);
+				// }
 
-				if (airspeed < _parameters.airspeed_trim) {
-					trim_roll += math::gradual(airspeed, _parameters.airspeed_min, _parameters.airspeed_trim, _parameters.dtrim_roll_vmin,
-								   0.0f);
-					trim_pitch += math::gradual(airspeed, _parameters.airspeed_min, _parameters.airspeed_trim, _parameters.dtrim_pitch_vmin,
-								    0.0f);
-					trim_yaw += math::gradual(airspeed, _parameters.airspeed_min, _parameters.airspeed_trim, _parameters.dtrim_yaw_vmin,
-								  0.0f);
-
-				} else {
-					trim_roll += math::gradual(airspeed, _parameters.airspeed_trim, _parameters.airspeed_max, 0.0f,
-								   _parameters.dtrim_roll_vmax);
-					trim_pitch += math::gradual(airspeed, _parameters.airspeed_trim, _parameters.airspeed_max, 0.0f,
-								    _parameters.dtrim_pitch_vmax);
-					trim_yaw += math::gradual(airspeed, _parameters.airspeed_trim, _parameters.airspeed_max, 0.0f,
-								  _parameters.dtrim_yaw_vmax);
-				}
-
-				/* add trim increment if flaps are deployed  */
-				trim_roll += _flaps_applied * _parameters.dtrim_roll_flaps;
-				trim_pitch += _flaps_applied * _parameters.dtrim_pitch_flaps;
-
-				/* Run attitude controllers */
-				if (_vcontrol_mode.flag_control_attitude_enabled) {
-					if (PX4_ISFINITE(_att_sp.roll_body) && PX4_ISFINITE(_att_sp.pitch_body)) {
-						_roll_ctrl.control_attitude(control_input);
-						_pitch_ctrl.control_attitude(control_input);
-						_yaw_ctrl.control_attitude(control_input); //runs last, because is depending on output of roll and pitch attitude
-						_wheel_ctrl.control_attitude(control_input);
-
-						/* Update input data for rate controllers */
-						control_input.roll_rate_setpoint = _roll_ctrl.get_desired_rate();
-						control_input.pitch_rate_setpoint = _pitch_ctrl.get_desired_rate();
-						control_input.yaw_rate_setpoint = _yaw_ctrl.get_desired_rate();
-
-						/* Run attitude RATE controllers which need the desired attitudes from above, add trim */
-						float roll_u = _roll_ctrl.control_euler_rate(control_input);
-						_actuators.control[actuator_controls_s::INDEX_ROLL] = (PX4_ISFINITE(roll_u)) ? roll_u + trim_roll : trim_roll;
-
-						if (!PX4_ISFINITE(roll_u)) {
-							_roll_ctrl.reset_integrator();
-							perf_count(_nonfinite_output_perf);
-						}
-
-						float pitch_u = _pitch_ctrl.control_euler_rate(control_input);
-						_actuators.control[actuator_controls_s::INDEX_PITCH] = (PX4_ISFINITE(pitch_u)) ? pitch_u + trim_pitch : trim_pitch;
-
-						if (!PX4_ISFINITE(pitch_u)) {
-							_pitch_ctrl.reset_integrator();
-							perf_count(_nonfinite_output_perf);
-						}
-
-						float yaw_u = 0.0f;
-
-						if (_parameters.w_en && _att_sp.fw_control_yaw) {
-							yaw_u = _wheel_ctrl.control_bodyrate(control_input);
-
-						} else {
-							yaw_u = _yaw_ctrl.control_euler_rate(control_input);
-						}
-
-						_actuators.control[actuator_controls_s::INDEX_YAW] = (PX4_ISFINITE(yaw_u)) ? yaw_u + trim_yaw : trim_yaw;
-
-						/* add in manual rudder control in manual modes */
-						if (_vcontrol_mode.flag_control_manual_enabled) {
-							_actuators.control[actuator_controls_s::INDEX_YAW] += _manual.r;
-						}
-
-						if (!PX4_ISFINITE(yaw_u)) {
-							_yaw_ctrl.reset_integrator();
-							_wheel_ctrl.reset_integrator();
-							perf_count(_nonfinite_output_perf);
-						}
-
-						/* throttle passed through if it is finite and if no engine failure was detected */
-						_actuators.control[actuator_controls_s::INDEX_THROTTLE] = (PX4_ISFINITE(_att_sp.thrust_body[0])
-								&& !_vehicle_status.engine_failure) ? _att_sp.thrust_body[0] : 0.0f;
-
-						/* scale effort by battery status */
-						if (_parameters.bat_scale_en &&
-						    _actuators.control[actuator_controls_s::INDEX_THROTTLE] > 0.1f) {
-
-							bool updated = false;
-							orb_check(_battery_status_sub, &updated);
-
-							if (updated) {
-								battery_status_s battery_status = {};
-
-								if (orb_copy(ORB_ID(battery_status), _battery_status_sub, &battery_status) == PX4_OK) {
-									if (battery_status.scale > 0.0f) {
-										_battery_scale = battery_status.scale;
-									}
-								}
-							}
-
-							_actuators.control[actuator_controls_s::INDEX_THROTTLE] *= _battery_scale;
-						}
-
-					} else {
-						perf_count(_nonfinite_input_perf);
-					}
+				//
+				// /* add trim increment if flaps are deployed  */
+				// trim_roll += _flaps_applied * _parameters.dtrim_roll_flaps;
+				// trim_pitch += _flaps_applied * _parameters.dtrim_pitch_flaps;
+				//
+				// /* Run attitude controllers */
+				// if (_vcontrol_mode.flag_control_attitude_enabled) {
+				// 	if (PX4_ISFINITE(_att_sp.roll_body) && PX4_ISFINITE(_att_sp.pitch_body)) {
+				// 		_roll_ctrl.control_attitude(control_input);
+				// 		_pitch_ctrl.control_attitude(control_input);
+				// 		_yaw_ctrl.control_attitude(control_input); //runs last, because is depending on output of roll and pitch attitude
+				// 		_wheel_ctrl.control_attitude(control_input);
+				//
+				// 		/* Update input data for rate controllers */
+				// 		control_input.roll_rate_setpoint = _roll_ctrl.get_desired_rate();
+				// 		control_input.pitch_rate_setpoint = _pitch_ctrl.get_desired_rate();
+				// 		control_input.yaw_rate_setpoint = _yaw_ctrl.get_desired_rate();
+				//
+				// 		/* Run attitude RATE controllers which need the desired attitudes from above, add trim */
+				// 		float roll_u = _roll_ctrl.control_euler_rate(control_input);
+				// 		_actuators.control[actuator_controls_s::INDEX_ROLL] = (PX4_ISFINITE(roll_u)) ? roll_u + trim_roll : trim_roll;
+				//
+				// 		if (!PX4_ISFINITE(roll_u)) {
+				// 			_roll_ctrl.reset_integrator();
+				// 			perf_count(_nonfinite_output_perf);
+				// 		}
+				//
+				// 		float pitch_u = _pitch_ctrl.control_euler_rate(control_input);
+				// 		_actuators.control[actuator_controls_s::INDEX_PITCH] = (PX4_ISFINITE(pitch_u)) ? pitch_u + trim_pitch : trim_pitch;
+				//
+				// 		if (!PX4_ISFINITE(pitch_u)) {
+				// 			_pitch_ctrl.reset_integrator();
+				// 			perf_count(_nonfinite_output_perf);
+				// 		}
+				//
+				// 		float yaw_u = 0.0f;
+				//
+				// 		if (_parameters.w_en && _att_sp.fw_control_yaw) {
+				// 			yaw_u = _wheel_ctrl.control_bodyrate(control_input);
+				//
+				// 		} else {
+				// 			yaw_u = _yaw_ctrl.control_euler_rate(control_input);
+				// 		}
+				//
+				// 		_actuators.control[actuator_controls_s::INDEX_YAW] = (PX4_ISFINITE(yaw_u)) ? yaw_u + trim_yaw : trim_yaw;
+				//
+				// 		/* add in manual rudder control in manual modes */
+				// 		if (_vcontrol_mode.flag_control_manual_enabled) {
+				// 			_actuators.control[actuator_controls_s::INDEX_YAW] += _manual.r;
+				// 		}
+				//
+				// 		if (!PX4_ISFINITE(yaw_u)) {
+				// 			_yaw_ctrl.reset_integrator();
+				// 			_wheel_ctrl.reset_integrator();
+				// 			perf_count(_nonfinite_output_perf);
+				// 		}
+				//
+				// 		/* throttle passed through if it is finite and if no engine failure was detected */
+				// 		_actuators.control[actuator_controls_s::INDEX_THROTTLE] = (PX4_ISFINITE(_att_sp.thrust_body[0])
+				// 				&& !_vehicle_status.engine_failure) ? _att_sp.thrust_body[0] : 0.0f;
+				//
+				// 		/* scale effort by battery status */
+				// 		if (_parameters.bat_scale_en &&
+				// 		    _actuators.control[actuator_controls_s::INDEX_THROTTLE] > 0.1f) {
+				//
+				// 			bool updated = false;
+				// 			orb_check(_battery_status_sub, &updated);
+				//
+				// 			if (updated) {
+				// 				battery_status_s battery_status = {};
+				//
+				// 				if (orb_copy(ORB_ID(battery_status), _battery_status_sub, &battery_status) == PX4_OK) {
+				// 					if (battery_status.scale > 0.0f) {
+				// 						_battery_scale = battery_status.scale;
+				// 					}
+				// 				}
+				// 			}
+				//
+				// 			_actuators.control[actuator_controls_s::INDEX_THROTTLE] *= _battery_scale;
+				// 		}
+				//
+				// 	} else {
+				// 		perf_count(_nonfinite_input_perf);
+				// 	}
+				// Kitex comment out, end
 
 					/*
 					 * Lazily publish the rate setpoint (for analysis, the actuators are published below)
@@ -934,8 +937,9 @@ void FixedwingAttitudeControl::run()
 					_actuators.control[actuator_controls_s::INDEX_THROTTLE] = _manual.z;
 					// _actuators.control[actuator_controls_s::INDEX_THROTTLE] = PX4_ISFINITE(_rates_sp.thrust_body[0]) ?
 							// _rates_sp.thrust_body[0] : 0.0f;
-					// Kitex end
-				}
+
+				// }
+				// Kitex end
 
 				rate_ctrl_status_s rate_ctrl_status;
 				rate_ctrl_status.timestamp = hrt_absolute_time();
