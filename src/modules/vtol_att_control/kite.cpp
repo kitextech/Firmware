@@ -36,9 +36,9 @@
  ****************************************************************************/
 
 /**
-* @file tailsitter.cpp
+* @file kite.cpp
 *
-* @author Andreas Okholm   <bapstroman@gmail.com>
+* @author Andreas Okholm   <andreas@kitex.com>
 *
 */
 
@@ -446,4 +446,3 @@ void Kite::fill_actuator_outputs()
 	// throttle - not in use
 	_actuators_out_1->control[actuator_controls_s::INDEX_THROTTLE] = 0.0f;
 }
-
