@@ -153,6 +153,7 @@ FixedwingAttitudeControl::FixedwingAttitudeControl() :
 	_vcontrol_mode_sub = orb_subscribe(ORB_ID(vehicle_control_mode));
 	_params_sub = orb_subscribe(ORB_ID(parameter_update));
 	_manual_sub = orb_subscribe(ORB_ID(manual_control_setpoint));
+	_local_pos_sub = orb_subscribe(ORB_ID(vehicle_local_position));
 	_global_pos_sub = orb_subscribe(ORB_ID(vehicle_global_position));
 	_vehicle_status_sub = orb_subscribe(ORB_ID(vehicle_status));
 	_vehicle_land_detected_sub = orb_subscribe(ORB_ID(vehicle_land_detected));
@@ -167,6 +168,7 @@ FixedwingAttitudeControl::~FixedwingAttitudeControl()
 	orb_unsubscribe(_vcontrol_mode_sub);
 	orb_unsubscribe(_params_sub);
 	orb_unsubscribe(_manual_sub);
+	orb_unsubscribe(_local_pos_sub);
 	orb_unsubscribe(_global_pos_sub);
 	orb_unsubscribe(_vehicle_status_sub);
 	orb_unsubscribe(_vehicle_land_detected_sub);
