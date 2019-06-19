@@ -75,13 +75,14 @@
 #include <uORB/topics/vehicle_land_detected.h>
 #include <uORB/topics/vehicle_local_position.h>
 #include <uORB/topics/vehicle_local_position_setpoint.h>
+#include <uORB/topics/vehicle_rates_setpoint.h>	// Kitex
 #include <uORB/topics/position_setpoint_triplet.h>
 #include <uORB/topics/vtol_vehicle_status.h>
 
 #include "tiltrotor.h"
 #include "tailsitter.h"
 #include "standard.h"
-#include "kite.h"
+#include "kite.h"	// Kitex
 
 extern "C" __EXPORT int vtol_att_control_main(int argc, char *argv[]);
 
@@ -108,10 +109,13 @@ public:
 	struct vehicle_attitude_setpoint_s		*get_att_sp() {return &_v_att_sp;}
 	struct vehicle_attitude_setpoint_s 		*get_fw_virtual_att_sp() {return &_fw_virtual_att_sp;}
 	struct vehicle_attitude_setpoint_s 		*get_mc_virtual_att_sp() {return &_mc_virtual_att_sp;}
+	struct vehicle_rates_setpoint_s 		*get_fw_virtual_v_rates_sp() {return &_fw_virtual_v_rates_sp;} //Kitex
+	struct vehicle_rates_setpoint_s 		*get_mc_virtual_v_rates_sp() {return &_mc_virtual_v_rates_sp;} //Kitex
 	struct vehicle_control_mode_s 			*get_control_mode() {return &_v_control_mode;}
 	struct vehicle_land_detected_s			*get_land_detected() {return &_land_detected;}
 	struct vehicle_local_position_s 		*get_local_pos() {return &_local_pos;}
 	struct vehicle_local_position_setpoint_s	*get_local_pos_sp() {return &_local_pos_sp;}
+	struct manual_control_setpoint_s		*get_manual_control_sp() {return &_manual_control_sp;}; // Kitex
 	struct vtol_vehicle_status_s			*get_vtol_vehicle_status() {return &_vtol_vehicle_status;}
 
 	struct Params 					*get_params() {return &_params;}
@@ -152,6 +156,9 @@ private:
 	vehicle_attitude_setpoint_s		_v_att_sp{};			//vehicle attitude setpoint
 	vehicle_attitude_setpoint_s 		_fw_virtual_att_sp{};	// virtual fw attitude setpoint
 	vehicle_attitude_setpoint_s 		_mc_virtual_att_sp{};	// virtual mc attitude setpoint
+
+	vehicle_rates_setpoint_s		_fw_virtual_v_rates_sp{}; // Kitex
+	vehicle_rates_setpoint_s		_mc_virtual_v_rates_sp{}; // Kitex
 
 	actuator_controls_s			_actuators_fw_in{};	//actuator controls from fw_att_control
 	actuator_controls_s			_actuators_mc_in{};	//actuator controls from mc_att_control
@@ -197,6 +204,7 @@ private:
 		param_t diff_thrust;
 		param_t diff_thrust_scale;
 		param_t v19_vt_rolldir;
+		param_t vtol_front_trans_dur; // Kitex
 	} _params_handles{};
 
 	/* for multicopters it is usual to have a non-zero idle speed of the engines
@@ -230,6 +238,8 @@ private:
 	int 		parameters_update();			//Update local parameter cache
 
 	void		handle_command();
+	void 		publish_rates_sp(); // Kitex
+	void    do_poll(); // Kitex
 };
 
 #endif

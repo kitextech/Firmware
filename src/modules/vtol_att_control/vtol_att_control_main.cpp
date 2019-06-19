@@ -558,6 +558,28 @@ VtolAttitudeControl::abort_front_transition(const char *reason)
 	}
 }
 
+// Kitex begin
+// Do poll
+void
+VtolAttitudeControl::do_poll(){
+	land_detected_poll();
+	tecs_status_poll();
+	vehicle_attitude_poll();  //Check for attitude updates.
+	vehicle_cmd_poll();
+	vehicle_control_mode_poll();	//Check for changes in vehicle control mode.
+	vehicle_manual_poll();			//Check for changes in manual inputs.
+	actuator_controls_fw_poll();	//Check for changes in fw_attitude_control output
+	actuator_controls_mc_poll();	//Check for changes in mc_attitude_control output
+	fw_virtual_att_sp_poll();
+	mc_virtual_att_sp_poll();
+	pos_sp_triplet_poll();		// Check for changes in position setpoint values
+	vehicle_airspeed_poll();		// Check for changes in airspeed
+	vehicle_local_pos_poll();		// Check for changes in sensor values
+	vehicle_local_pos_sp_poll();		// Check for changes in setpoint values
+}
+// Kitex end
+
+
 /**
 * Update parameters.
 */
