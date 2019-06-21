@@ -284,6 +284,7 @@ private:
 	)
 
 	bool _is_tailsitter{false};
+	bool _is_kx4{false};	// Kitex
 
 	matrix::Vector3f _rate_p;		/**< P gain for angular rate error */
 	matrix::Vector3f _rate_i;		/**< I gain for angular rate error */

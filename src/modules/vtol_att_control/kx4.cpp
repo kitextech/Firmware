@@ -32,14 +32,14 @@
  ****************************************************************************/
 
 /**
-* @file tailsitter.cpp
+* @file kx4.cpp
 *
 * @author Roman Bapst 		<bapstroman@gmail.com>
 * @author David Vorsin     <davidvorsin@gmail.com>
 *
 */
 
-#include "tailsitter.h"
+#include "kx4.h"
 #include "vtol_att_control_main.h"
 
 #define ARSP_YAW_CTRL_DISABLE 4.0f	// airspeed at which we stop controlling yaw during a front transition
@@ -49,7 +49,7 @@
 
 using namespace matrix;
 
-Tailsitter::Tailsitter(VtolAttitudeControl *attc) :
+Kx4::Kx4(VtolAttitudeControl *attc) :
 	VtolType(attc)
 {
 	_vtol_schedule.flight_mode = MC_MODE;
@@ -61,24 +61,24 @@ Tailsitter::Tailsitter(VtolAttitudeControl *attc) :
 
 	_flag_was_in_trans_mode = false;
 
-	_params_handles_tailsitter.front_trans_dur_p2 = param_find("VT_TRANS_P2_DUR");
-	_params_handles_tailsitter.fw_pitch_sp_offset = param_find("FW_PSP_OFF");
+	_params_handles_kx4.front_trans_dur_p2 = param_find("VT_TRANS_P2_DUR");
+	_params_handles_kx4.fw_pitch_sp_offset = param_find("FW_PSP_OFF");
 }
 
 void
-Tailsitter::parameters_update()
+Kx4::parameters_update()
 {
 	float v;
 
 	/* vtol front transition phase 2 duration */
-	param_get(_params_handles_tailsitter.front_trans_dur_p2, &v);
-	_params_tailsitter.front_trans_dur_p2 = v;
+	param_get(_params_handles_kx4.front_trans_dur_p2, &v);
+	_params_kx4.front_trans_dur_p2 = v;
 
-	param_get(_params_handles_tailsitter.fw_pitch_sp_offset, &v);
-	_params_tailsitter.fw_pitch_sp_offset = math::radians(v);
+	param_get(_params_handles_kx4.fw_pitch_sp_offset, &v);
+	_params_kx4.fw_pitch_sp_offset = math::radians(v);
 }
 
-void Tailsitter::update_vtol_state()
+void Kx4::update_vtol_state()
 {
 	/* simple logic using a two way switch to perform transitions.
 	 * after flipping the switch the vehicle will start tilting in MC control mode, picking up
@@ -148,7 +148,7 @@ void Tailsitter::update_vtol_state()
 		}
 	}
 
-	// map tailsitter specific control phases to simple control modes
+	// map kx4 specific control phases to simple control modes
 	switch (_vtol_schedule.flight_mode) {
 	case MC_MODE:
 		_vtol_mode = ROTARY_WING;
@@ -174,7 +174,7 @@ void Tailsitter::update_vtol_state()
 	}
 }
 
-void Tailsitter::update_transition_state()
+void Kx4::update_transition_state()
 {
 	float time_since_trans_start = (float)(hrt_absolute_time() - _vtol_schedule.transition_start) * 1e-6f;
 
@@ -201,7 +201,7 @@ void Tailsitter::update_transition_state()
 		} else if (_vtol_schedule.flight_mode == TRANSITION_FRONT_P1) {
 			// initial attitude setpoint for the transition should be with wings level
 			_q_trans_start = Eulerf(0.0f, _mc_virtual_att_sp->pitch_body, _mc_virtual_att_sp->yaw_body);
-			Vector3f x = Dcmf(Quatf(_v_att->q)) * Vector3f(0, 1, 0);	// NED?
+			Vector3f x = Dcmf(Quatf(_v_att->q)) * Vector3f(1, 0, 0);
 			_trans_rot_axis = -x.cross(Vector3f(0, 0, -1));
 		}
 
@@ -216,7 +216,7 @@ void Tailsitter::update_transition_state()
 
 		const float trans_pitch_rate = M_PI_2_F / _params->front_trans_duration;
 
-		if (tilt < M_PI_2_F - _params_tailsitter.fw_pitch_sp_offset) {
+		if (tilt < M_PI_2_F - _params_kx4.fw_pitch_sp_offset) {
 			_q_trans_sp = Quatf(AxisAnglef(_trans_rot_axis,
 						       time_since_trans_start * trans_pitch_rate)) * _q_trans_start;
 		}
@@ -252,13 +252,13 @@ void Tailsitter::update_transition_state()
 	_v_att_sp->q_d_valid = true;
 }
 
-void Tailsitter::waiting_on_tecs()
+void Kx4::waiting_on_tecs()
 {
 	// copy the last trust value from the front transition
 	_v_att_sp->thrust_body[0] = _thrust_transition;
 }
 
-void Tailsitter::update_fw_state()
+void Kx4::update_fw_state()
 {
 	VtolType::update_fw_state();
 
@@ -272,7 +272,7 @@ void Tailsitter::update_fw_state()
 /**
 * Write data to actuator output topic.
 */
-void Tailsitter::fill_actuator_outputs()
+void Kx4::fill_actuator_outputs()
 {
 	_actuators_out_0->timestamp = hrt_absolute_time();
 	_actuators_out_0->timestamp_sample = _actuators_mc_in->timestamp_sample;

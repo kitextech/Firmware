@@ -83,6 +83,7 @@
 #include "tailsitter.h"
 #include "standard.h"
 #include "kite.h"	// Kitex
+#include "kx4.h"	// Kitex
 
 extern "C" __EXPORT int vtol_att_control_main(int argc, char *argv[]);
 

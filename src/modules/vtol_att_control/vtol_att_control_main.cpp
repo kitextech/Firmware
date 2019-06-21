@@ -106,6 +106,10 @@ VtolAttitudeControl::VtolAttitudeControl()
 	} else if (_params.vtol_type == vtol_type::KITE) {
 		_vtol_type = new Kite(this);
 
+	} else if (_params.vtol_type == vtol_type::KX4) {
+		_vtol_type = new Kx4(this);
+		printf("We made a Kx4 \n");
+
 	} else {
 		_task_should_exit = true;
 	}

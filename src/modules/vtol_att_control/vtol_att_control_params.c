@@ -74,12 +74,13 @@ PARAM_DEFINE_INT32(VT_IDLE_PWM_MC, 900);
 PARAM_DEFINE_INT32(VT_FW_PERM_STAB, 0);
 
 /**
- * VTOL Type (Tailsitter=0, Tiltrotor=1, Standard=2, Kite=3)
+ * VTOL Type (Tailsitter=0, Tiltrotor=1, Standard=2, Kite=3, KX4=4)
  *
  * @value 0 Tailsitter
  * @value 1 Tiltrotor
  * @value 2 Standard
  * @value 3 Kite
+ * @value 4 KX4
  * @min 0
  * @max 2
  * @decimal 0

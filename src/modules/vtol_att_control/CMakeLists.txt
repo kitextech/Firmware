@@ -42,7 +42,7 @@ px4_add_module(
 		tailsitter.cpp
 		standard.cpp
 		kite.cpp
+		kx4.cpp
 	DEPENDS
 		pwm_limit
 	)
-
