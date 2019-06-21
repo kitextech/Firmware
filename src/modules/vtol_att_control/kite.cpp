@@ -42,6 +42,8 @@
 *
 */
 
+#define ROLL_DESIRED -1.4f
+
 #include "kite.h"
 #include "vtol_att_control_main.h"
 using namespace matrix;
@@ -154,6 +156,10 @@ void Kite::update_vtol_state()
 	// float roll = euler.phi();
 	// float pitch = euler.theta();
 
+
+	Eulerf euler = Quatf(_v_att->q);
+	float roll = euler.phi();
+
 	// update velocity
 	_speed = sqrtf(
 		_local_pos->vx*_local_pos->vx +
@@ -184,11 +190,13 @@ void Kite::update_vtol_state()
 				// transition_ratio for ground testing.
 				update_transition_ratio();
 				//printf(" The air speed ratio is %.2f \n", (double) _airspeed_ratio);
-				if (_airspeed_ratio >= 1.0f) {
+				if (_airspeed_ratio >= 1.0f && roll <= ROLL_DESIRED) {
+					printf("It is done! Roll: %.2f, roll_des: %.2f \n", (double) roll, (double) ROLL_DESIRED);
 					_vtol_schedule.flight_mode = FW_MODE;
 				}
 				else if (_transition_ratio >= 2.0f) {
 					_vtol_schedule.flight_mode = FW_MODE; // FIXME: For testing !!!
+					// printf("What is this \n");
 					// _vtol_schedule.flight_mode = TRANSITION_BACK;
 				}
 			break;
@@ -403,6 +411,7 @@ void Kite::fill_actuator_outputs()
 	// roll
 	_actuators_out_0->control[actuator_controls_s::INDEX_ROLL] =
 		_actuators_mc_in->control[actuator_controls_s::INDEX_ROLL] * _mc_roll_weight;
+	// printf("roll actuator %.2f \n", (double) _actuators_out_0->control[actuator_controls_s::INDEX_ROLL]);
 	// pitch
 	_actuators_out_0->control[actuator_controls_s::INDEX_PITCH] =
 		_actuators_mc_in->control[actuator_controls_s::INDEX_PITCH] * _mc_pitch_weight;

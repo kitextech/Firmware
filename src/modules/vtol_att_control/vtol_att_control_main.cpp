@@ -852,6 +852,7 @@ void VtolAttitudeControl::task_main()
 			if (_v_att_sp_pub != nullptr) {
 				/* publish the attitude setpoint */
 				orb_publish(ORB_ID(vehicle_attitude_setpoint), _v_att_sp_pub, &_v_att_sp);
+				// printf("roll_sp %.2f \n", (double) _v_att_sp.roll_body);
 
 			} else {
 				/* advertise and publish */
