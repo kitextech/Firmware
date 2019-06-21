@@ -86,7 +86,7 @@ PARAM_DEFINE_FLOAT(VT_T_B_PITCH, -0.3f);
  * @decimal 3
  * @group VTOL Attitude Control
 */
-PARAM_DEFINE_FLOAT(VT_T_B_ROLL, 0.0f);
+PARAM_DEFINE_FLOAT(VT_T_B_ROLL, 0.5f);
 
 /**
 
@@ -126,5 +126,4 @@ PARAM_DEFINE_FLOAT(VT_T_B_THRUST, 0.4f);
  * @decimal 3
  * @group VTOL Attitude Control
 */
-PARAM_DEFINE_FLOAT(VT_WIND_SPEED, 4f);
-
+PARAM_DEFINE_FLOAT(VT_WIND_SPEED, 0f);

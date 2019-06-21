@@ -71,7 +71,7 @@ Kite::Kite(VtolAttitudeControl *attc) :
 	_params_handles_kite.trans_backwards_roll = param_find("VT_T_B_ROLL");
 	_params_handles_kite.trans_backwards_thrust = param_find("VT_T_B_THRUST");
 	_params_handles_kite.wind_speed = param_find("VT_WIND_SPEED");
-      
+
 	_params_handles_kite.x_pos_b		= param_find("MPC_X_POS_B"); // from MC_POS_CONTROL
 	_params_handles_kite.y_pos_b		= param_find("MPC_Y_POS_B");
 	_params_handles_kite.z_pos_b		= param_find("MPC_Z_POS_B");
@@ -140,6 +140,13 @@ Kite::parameters_update()
 	_params_kite.rudder_elev_swtich = l;
 
   printf("UPDATE KITE rudder: %.2f, elevator: %.2f, switch: %2d \n", (double) _params_kite.rudder_setup, (double) _params_kite.elevator_setup, _params_kite.rudder_elev_swtich);
+// report the imported data
+	printf("trans_forward_duration_max : %.2f \n", (double)_params_kite.trans_forward_duration_max);
+	printf("airspeed_tran : %.2f \n", (double)_params_kite.airspeed_trans);
+	printf("trans_forward_roll : %.2f \n", (double)_params_kite.trans_forward_roll);
+	printf("trans_forward_pitch : %.2f \n", (double)_params_kite.trans_forward_pitch);
+	printf("trans_forward_thrust : %.2f \n", (double)_params_kite.trans_forward_thrust);
+	printf("wind_speed : %.2f \n", (double)_params_kite.wind_speed);
 
 }
 
@@ -185,6 +192,7 @@ void Kite::update_vtol_state()
 			break;
 
 		case TRANSITION_FRONT:
+
 				// transition_ratio for ground testing.
 				update_transition_ratio();
 				//printf(" The air speed ratio is %.2f \n", (double) _airspeed_ratio);
@@ -267,20 +275,21 @@ void Kite::update_transition_state()
 	rp(2) = _local_pos->z - _params_kite.pos_b(2);
   //printf ("rp X value : %.2f , Y value %.2f , Z value %.2f \n", (double) rp(0) , (double) rp(1), (double) rp(2));
 	float heading = atan2f(rp(1), rp(0));
-
+  //printf("heading is : \t %.2f\n",(double) heading);
 	if (_vtol_schedule.flight_mode == TRANSITION_FRONT) {
 
 		float headingCorrected = heading - math::constrain(_airspeed_ratio * _airspeed_ratio, 0.0f, 1.0f) * atan2f(_params_kite.wind_speed, _speed);
 		float pitchGoal = atan2f(- rp(2), sqrt(rp(0) * rp(0) + rp(1) * rp(1)));
 		float pitch = (1.0f - t)*_pitch_transition_start + t*pitchGoal;
 		float roll = (1.0f - t)*_roll_transition_start + t*_params_kite.trans_forward_roll;
-
 		// TODO _airspeed_ratio add pitch correction for wind
 
 		_v_att_sp->yaw_body = headingCorrected; //_yaw_transition_start;
-		_v_att_sp->roll_body = roll;
+		_v_att_sp->roll_body = roll*50;
 		_v_att_sp->pitch_body = pitch;
 		_v_att_sp->thrust_body[2] = (1.0f - t)*_thrust_transition_start + t*_params_kite.trans_forward_thrust;
+		printf("roll_body is : \t %.2f\n",(double) roll);
+		printf("thrust_body is : \t %.2f\n",(double) _v_att_sp->thrust_body[2]);
 
 	}
 	else if (_vtol_schedule.flight_mode == TRANSITION_BACK) {
@@ -322,9 +331,12 @@ void Kite::set_transition_starting_values(bool forward)
 	_yaw_transition_start = euler.psi();
 
 	_thrust_transition_start = _mc_virtual_att_sp->thrust_body[2];
-	printf("Thrust value .%2f \n",(double) _mc_virtual_att_sp->thrust_body[2]);
 	_pitch_transition_start = euler.theta();
 	_roll_transition_start = euler.phi();
+	printf("_thrust_transition_start .%2f \n",(double) _thrust_transition_start);
+	printf("_pitch_transition_start  .%2f \n",(double) _pitch_transition_start);
+	printf("_roll_transition_start   .%2f \n",(double) 	_roll_transition_start);
+
 }
 
 void Kite::update_transition_ratio()
@@ -450,4 +462,3 @@ void Kite::fill_actuator_outputs()
 	// throttle - not in use
 	_actuators_out_1->control[actuator_controls_s::INDEX_THROTTLE] = 0.0f;
 }
-

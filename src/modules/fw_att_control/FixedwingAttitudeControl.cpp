@@ -1197,8 +1197,8 @@ float FixedwingAttitudeControl::signed_angle(const matrix::Vector<float, 2 > &le
 {
 	const matrix::Vector< float,  2 > e_x = left.normalized();
   matrix::Vector< float , 2 > e_y;
-	e_y(0) = -e_x(0);
-	e_y(1) =  e_x(1);
+	e_y(0) = -e_x(1);
+	e_y(1) =  e_x(0);
 	return atan2f(right*e_y, right*e_x);
 }
 

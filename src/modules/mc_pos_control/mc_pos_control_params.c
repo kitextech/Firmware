@@ -48,7 +48,7 @@
  * @group Multicopter Position Control
  */
 
- PARAM_DEFINE_FLOAT(MPC_PHI_C, 0.0f);
+ PARAM_DEFINE_FLOAT(MPC_PHI_C, 0.3f);
  PARAM_DEFINE_FLOAT(MPC_THETA_C, 0.0f);
 
  /**
@@ -57,7 +57,7 @@
  * @group Multicopter Position Control
  */
 
-PARAM_DEFINE_FLOAT(MPC_LOOP_TURN_R, 0.0f);
+PARAM_DEFINE_FLOAT(MPC_LOOP_TURN_R, 10.0f);
 
  /**
   * Position of B in NED // KITEX
