@@ -63,7 +63,7 @@
 #include <uORB/topics/vehicle_status.h>
 #include <uORB/topics/fw_turning.h> // KITEX
 
-#include <iostream>	// Kitex, for debugging
+#include <iostream	// Kitex, for debugging
 
 using matrix::Eulerf;
 using matrix::Quatf;

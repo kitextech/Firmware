@@ -87,6 +87,6 @@ px4_add_romfs_files(
 	vtol_delta.aux.mix
 	wingwing.main.mix
 	zmr250.main.mix
-	KX4.aux.mix
-	KX4_with_tether.aux.mix
+	kx4.main.mix
+	kx4.aux.mix
 )

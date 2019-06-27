@@ -47,6 +47,7 @@
 #include <parameters/param.h>
 #include <drivers/drv_hrt.h>
 #include <matrix/matrix/math.hpp>
+#include <iostream>	// Kitex
 
 class Tailsitter : public VtolType
 {

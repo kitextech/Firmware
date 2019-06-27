@@ -255,17 +255,14 @@ MulticopterAttitudeControl::vehicle_status_poll()
 				_attitude_sp_id = ORB_ID(mc_virtual_attitude_setpoint);
 
 				int32_t vt_type = -1;
-				if (param_get(param_find("VT_TYPE"), &vt_type) == PX4_OK) {
-					_is_tailsitter = (vt_type == vtol_type::TAILSITTER);
-				}
-
 				// Kitex begin
-				else if (param_get(param_find("VT_TYPE"), &vt_type) == PX4_OK) {
-					_is_kx4 = (vt_type == vtol_type::KX4);
-				}
-
-				else if (param_get(param_find("VT_TYPE"), &vt_type) == PX4_OK) {
-					_is_kite = (vt_type == vtol_type::KITE);
+				printf("LET US BUILD SOMETHING \n");
+				if (param_get(param_find("VT_TYPE"), &vt_type) == PX4_OK) {
+					if (vt_type == vtol_type::TAILSITTER ||
+							vt_type == vtol_type::KITE ||
+							vt_type == vtol_type::KX4) {
+								_is_tilting_vtol = true;
+					}
 				}
 				// Kitex end
 
@@ -836,12 +833,10 @@ MulticopterAttitudeControl::run()
 
 			const bool is_hovering = _vehicle_status.is_rotary_wing && !_vehicle_status.in_transition_mode;
 
-			// vehicle is a tailsitter in transition mode
-			const bool is_tailsitter_transition = _vehicle_status.in_transition_mode && _is_tailsitter;
-			const bool is_kx4_transition = _vehicle_status.in_transition_mode && _is_kx4;	// Kitex
-			const bool is_kite_transition = _vehicle_status.in_transition_mode && _is_kite;	// Kitex
+			// vehicle is a tilting vtol in transition mode
+			const bool is_tilting_vtol_transition = _vehicle_status.in_transition_mode && _is_tilting_vtol;	// Kitex
 
-			bool run_att_ctrl = _v_control_mode.flag_control_attitude_enabled && (is_hovering || is_tailsitter_transition || is_kx4_transition || is_kite_transition);	// Kitex
+			bool run_att_ctrl = _v_control_mode.flag_control_attitude_enabled && (is_hovering || is_tilting_vtol_transition);	// Kitex
 
 
 			if (run_att_ctrl) {

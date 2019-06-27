@@ -59,6 +59,8 @@
 #include <uORB/topics/landing_gear.h>
 #include <vtol_att_control/vtol_type.h>
 
+// #include <iostream>	// Kitex
+
 #include <AttitudeControl.hpp>
 
 /**
@@ -283,9 +285,7 @@ private:
 		(ParamInt<px4::params::MC_AIRMODE>) _param_mc_airmode
 	)
 
-	bool _is_tailsitter{false};
-	bool _is_kx4{false};	// Kitex
-	bool _is_kite{false};	// Kitex
+	bool _is_tilting_vtol{false}; // Kitex
 
 	matrix::Vector3f _rate_p;		/**< P gain for angular rate error */
 	matrix::Vector3f _rate_i;		/**< I gain for angular rate error */

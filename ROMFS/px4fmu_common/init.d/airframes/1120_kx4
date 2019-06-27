@@ -1,8 +1,21 @@
 #!/bin/sh
 #
-# @name KX4 VTOL
+# @name KiteX Octocopter h geometry
 #
-# @type MODIFIED VTOL
+# @type Octorotor h
+# @class Copter
+#
+# @output MAIN1 motor 1
+# @output MAIN2 motor 2
+# @output MAIN3 motor 3
+# @output MAIN4 motor 4
+# @output MAIN5 motor 5
+# @output MAIN6 motor 6
+# @output MAIN7 motor 7
+# @output MAIN8 motor 8
+#
+#
+# @maintainer Andreas Okholm <andreas@kitex.tech>
 #
 
 sh /etc/init.d/rc.vtol_defaults
@@ -11,9 +24,8 @@ if [ $AUTOCNF = yes ]
 then
   param set MC_PITCH_P 6
   param set MC_PITCHRATE_P 0.2
-	# param set MC_ROLL_P 6
+	# param set MC_ROLL_P 6.5
 	param set MC_ROLLRATE_P 0.3
-  param set MC_YAW_EN 0     # With tether, we don't want to have yaw control by default
 
 	param set MIS_TAKEOFF_ALT 10
   # number of the motors of the VTOL
@@ -25,13 +37,9 @@ then
 	param set RTL_DESCEND_ALT 10.0
 	param set RTL_LAND_DELAY 0
   param set V19_VT_ROLLDIR 0
-
-  # Stop PX4 fw_att_control and run KiteX fw_att_control
-  # fw_att_control stop
-  # kite_att_control start
 fi
 # This is special kitex VTOL ( from now it has to be always 22)
 set MAV_TYPE 22
 # kitex special H configuration for the mixer
-set MIXER_FILE etc/mixers-sitl/kx4_with_tether.main.mix
-set MIXER custom
+set MIXER kx4
+set MIXER_AUX kx4

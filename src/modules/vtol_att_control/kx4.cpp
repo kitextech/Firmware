@@ -130,11 +130,14 @@ void Kx4::update_vtol_state()
 
 		case TRANSITION_FRONT_P1: {
 
+				printf("Transition to fw going on \n");
+
 				bool airspeed_condition_satisfied = _airspeed->indicated_airspeed_m_s >= _params->transition_airspeed;
 				airspeed_condition_satisfied |= _params->airspeed_disabled;
 
 				// check if we have reached airspeed  and pitch angle to switch to TRANSITION P2 mode
 				if ((airspeed_condition_satisfied && pitch <= PITCH_TRANSITION_FRONT_P1) || can_transition_on_ground()) {
+					printf("Airspeed condition satisfied (or can trans on ground) \n");
 					_vtol_schedule.flight_mode = FW_MODE;
 				}
 
@@ -201,7 +204,7 @@ void Kx4::update_transition_state()
 		} else if (_vtol_schedule.flight_mode == TRANSITION_FRONT_P1) {
 			// initial attitude setpoint for the transition should be with wings level
 			_q_trans_start = Eulerf(0.0f, _mc_virtual_att_sp->pitch_body, _mc_virtual_att_sp->yaw_body);
-			Vector3f x = Dcmf(Quatf(_v_att->q)) * Vector3f(1, 0, 0);
+			Vector3f x = Dcmf(Quatf(_v_att->q)) * Vector3f(0, 1, 0);	// Kitex
 			_trans_rot_axis = -x.cross(Vector3f(0, 0, -1));
 		}
 

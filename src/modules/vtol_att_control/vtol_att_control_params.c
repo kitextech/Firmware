@@ -82,7 +82,7 @@ PARAM_DEFINE_INT32(VT_FW_PERM_STAB, 0);
  * @value 3 Kite
  * @value 4 KX4
  * @min 0
- * @max 2
+ * @max 4
  * @decimal 0
  * @reboot_required true
  * @group VTOL Attitude Control

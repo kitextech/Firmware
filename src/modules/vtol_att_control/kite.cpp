@@ -189,15 +189,21 @@ void Kite::update_vtol_state()
 		case TRANSITION_FRONT:
 				// transition_ratio for ground testing.
 				update_transition_ratio();
-				//printf(" The air speed ratio is %.2f \n", (double) _airspeed_ratio);
+				// printf("We are rolling... \n");
+				// printf(" Transition ratio: %.2f \n", (double) _transition_ratio);
+				printf("roll: %.2f, roll_des: %.2f,  trans_rat: %.2f \n", (double) roll, (double) ROLL_DESIRED, (double) _transition_ratio);
 				if (_airspeed_ratio >= 1.0f && roll <= ROLL_DESIRED) {
 					printf("It is done! Roll: %.2f, roll_des: %.2f \n", (double) roll, (double) ROLL_DESIRED);
 					_vtol_schedule.flight_mode = FW_MODE;
 				}
+				// else if (_transition_ratio >= 1.0f && roll > ROLL_DESIRED) {
+				// 	printf("Transition failed \n");
+				// 	_vtol_schedule.flight_mode = MC_MODE;
 				else if (_transition_ratio >= 2.0f) {
+					printf("Does this happen? \n");
 					_vtol_schedule.flight_mode = FW_MODE; // FIXME: For testing !!!
-					// printf("What is this \n");
-					// _vtol_schedule.flight_mode = TRANSITION_BACK;
+					printf("What is this \n");
+					_vtol_schedule.flight_mode = TRANSITION_BACK;
 				}
 			break;
 
