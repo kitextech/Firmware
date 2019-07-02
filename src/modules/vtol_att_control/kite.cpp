@@ -191,7 +191,7 @@ void Kite::update_vtol_state()
 				update_transition_ratio();
 				// printf("We are rolling... \n");
 				// printf(" Transition ratio: %.2f \n", (double) _transition_ratio);
-				printf("roll: %.2f, roll_des: %.2f,  trans_rat: %.2f \n", (double) roll, (double) ROLL_DESIRED, (double) _transition_ratio);
+				// printf("roll: %.2f, roll_des: %.2f,  trans_rat: %.2f \n", (double) roll, (double) ROLL_DESIRED, (double) _transition_ratio);
 				if (_airspeed_ratio >= 1.0f && roll <= ROLL_DESIRED) {
 					printf("It is done! Roll: %.2f, roll_des: %.2f \n", (double) roll, (double) ROLL_DESIRED);
 					_vtol_schedule.flight_mode = FW_MODE;
@@ -426,8 +426,8 @@ void Kite::fill_actuator_outputs()
 		_actuators_mc_in->control[actuator_controls_s::INDEX_YAW] * _mc_yaw_weight;
 	// throttle
 	_actuators_out_0->control[actuator_controls_s::INDEX_THROTTLE] =
-                //(_vtol_schedule.flight_mode == FW_MODE)
-                        //? _actuators_fw_in->control[actuator_controls_s::INDEX_THROTTLE]
+                (_vtol_schedule.flight_mode == FW_MODE)
+                        ? 1.0f :	// Kitex: Added ternary to give full throttle instead of mc_throttle
                          _actuators_mc_in->control[actuator_controls_s::INDEX_THROTTLE];
 
 	// Fixed wing controls

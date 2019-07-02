@@ -920,6 +920,7 @@ void FixedwingAttitudeControl::run()
 
 				// Kitex begin. Pure rate control
 				// } else {
+					// PX4_INFO("Pure rate control");
 					vehicle_rates_setpoint_poll();
 					_roll_ctrl.set_bodyrate_setpoint(_arc_roll_rate);	// Kitex
 					// _roll_ctrl.set_bodyrate_setpoint(_rates_sp.roll);
@@ -934,7 +935,8 @@ void FixedwingAttitudeControl::run()
 					// float yaw_u = _yaw_ctrl.control_bodyrate(control_input);
 					_actuators.control[actuator_controls_s::INDEX_YAW] = 0.0f;
 
-					_actuators.control[actuator_controls_s::INDEX_THROTTLE] = _manual.z;
+					// PX4_INFO("_manual.z = %.2f", (double) _manual.z);
+					_actuators.control[actuator_controls_s::INDEX_THROTTLE] = _manual.z;	// Kitex: Is not used (see kite.cpp)
 					// _actuators.control[actuator_controls_s::INDEX_THROTTLE] = PX4_ISFINITE(_rates_sp.thrust_body[0]) ?
 							// _rates_sp.thrust_body[0] : 0.0f;
 
@@ -1173,6 +1175,7 @@ void FixedwingAttitudeControl::update_pi_target_point(float search_radius)
 	_pi_path_i = index;
 	_target_point_pi(0) = _pi_path_x[_pi_path_i];
 	_target_point_pi(1) = _pi_path_y[_pi_path_i];
+	printf("Target point: (%.2f, %.2f) \n", (double) _target_point_pi(0), (double) _target_point_pi(1));
 }
 
 void FixedwingAttitudeControl::update_pi_arc()
