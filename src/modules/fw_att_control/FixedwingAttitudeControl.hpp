@@ -63,7 +63,7 @@
 #include <uORB/topics/vehicle_status.h>
 #include <uORB/topics/fw_turning.h> // KITEX
 
-#include <iostream>	// Kitex, for debugging
+// #include <iostream>	// Kitex, for debugging
 
 using matrix::Eulerf;
 using matrix::Quatf;
@@ -310,8 +310,8 @@ private:
 	matrix::Vector<float, 3> _pos; // KiteX: local position
 	matrix::Vector<float, 3> _vel; // KiteX: local position
 
-	float _pi_path_x[60]; // KiteX: x-coords of path points
-	float _pi_path_y[60]; // KiteX: y-coords of path points
+	float _pi_path_x[15]; // KiteX: x-coords of path points
+	float _pi_path_y[15]; // KiteX: y-coords of path points
 	int _pi_path_i = 0;   // KiteX: Path of kite in Pi plane
 
 	matrix::Vector<float, 2> _pos_pi; // KiteX: Projected position in Pi

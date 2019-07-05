@@ -45,7 +45,7 @@
 #include <parameters/param.h>
 #include <drivers/drv_hrt.h>
 #include <matrix/matrix/math.hpp>
-#include <iostream>
+// #include <iostream>
 
 class Kite : public VtolType
 {

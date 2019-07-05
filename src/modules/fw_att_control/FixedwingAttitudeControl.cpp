@@ -1133,22 +1133,25 @@ int fw_att_control_main(int argc, char *argv[])
 // KiteX: Run when the angles for C change
 void FixedwingAttitudeControl::update_pi(float phi, float theta)
 {
+
 	_parameters.e_pi_x(0) = -sinf(phi);
-	_parameters.e_pi_x(1) = cosf(phi);
-	_parameters.e_pi_x(2) = 0;
+	_parameters.e_pi_x(1) =  cosf(phi);
+	_parameters.e_pi_x(2) =  0;
 
 	_parameters.e_pi_y(0) = -cosf(phi)*sinf(theta);
 	_parameters.e_pi_y(1) = -sinf(phi)*sinf(theta);
 	_parameters.e_pi_y(2) = -cosf(theta);
+
 }
 
 // KiteX: Run when the turning radius changes
 void FixedwingAttitudeControl::update_pi_path(float radius)
 {
 	float offset = (float) M_PI_2; // index 0 at bottom of circle
-	for (int i = 0; i < 60; i++) {
-		float rho = i*2*M_PI/60;
-		_pi_path_x[i] = radius*cosf(rho + offset);
+
+	for (int i = 0; i < 15; i++) {
+		float rho = i*2*M_PI/15;
+		_pi_path_x[i] =  radius*cosf(rho + offset);
 		_pi_path_y[i] = -radius*sinf(rho + offset);
 	}
 }
@@ -1157,8 +1160,11 @@ void FixedwingAttitudeControl::update_pi_path(float radius)
 void FixedwingAttitudeControl::update_pi_projection()
 {
 	matrix::Vector<float, 3> relative_pos = _pos - _parameters.pos_b; // _parameters.pos_b should really be C, but it doesn't matter since B anc C is along PI (Z)
+ //printf("pos X : %.2f Y : %.2f Z : %.2f \n", (double )_pos(0) , (double )_pos(1),(double )_pos(2) );
 	_pos_pi(0) = relative_pos*_parameters.e_pi_x;
 	_pos_pi(1) = relative_pos*_parameters.e_pi_y;
+
+	printf("pos X : %.2f Y : %.2f  \n", (double )_pos_pi(0) , (double )_pos_pi(1));
 
 	_vel_pi(0) = _vel*_parameters.e_pi_x;
 	_vel_pi(1) = _vel*_parameters.e_pi_y;
@@ -1169,7 +1175,7 @@ void FixedwingAttitudeControl::update_pi_target_point(float search_radius)
 	int index = _pi_path_i;
 
 	while ((double) square_distance_to_path(index) < pow(search_radius, 2)) {
-		index = (index + 1) % 60;
+		index = (index + 1) % 15;
 	}
 
 	_pi_path_i = index;
