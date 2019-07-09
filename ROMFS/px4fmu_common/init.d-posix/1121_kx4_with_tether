@@ -30,6 +30,7 @@ then
   param set MPC_PHI_C 0.785
   param set MPC_THETA_C 0.5
   param set MPC_SPHERE_EN 0 # The sphere implmentation does not currently work
+  param set MPC_RESOLUTION 60
 
   # Stop PX4 fw_att_control and run KiteX fw_att_control
   # fw_att_control stop

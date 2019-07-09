@@ -44,6 +44,9 @@ using namespace time_literals;
  */
 extern "C" __EXPORT int fw_att_control_main(int argc, char *argv[]);
 
+
+
+
 FixedwingAttitudeControl::FixedwingAttitudeControl() :
 	_airspeed_sub(ORB_ID(airspeed)),
 
@@ -66,6 +69,7 @@ FixedwingAttitudeControl::FixedwingAttitudeControl() :
 	_parameter_handles.phiC			= param_find("MPC_PHI_C");
 	_parameter_handles.thetaC		= param_find("MPC_THETA_C");
 	_parameter_handles.turning_radius	= param_find("MPC_LOOP_TURN_R");
+	_parameter_handles.resolution	= param_find("MPC_RESOLUTION");
 
 	_parameter_handles.x_pos_b		= param_find("MPC_X_POS_B");
 	_parameter_handles.y_pos_b		= param_find("MPC_Y_POS_B");
@@ -194,6 +198,8 @@ FixedwingAttitudeControl::parameters_update()
 	param_get(_parameter_handles.x_pos_b, &_parameters.pos_b(0));
 	param_get(_parameter_handles.y_pos_b, &_parameters.pos_b(1));
 	param_get(_parameter_handles.z_pos_b, &_parameters.pos_b(2));
+	param_get(_parameter_handles.resolution, &_parameters.resolution);
+
 	// Kitex end
 
 	int32_t tmp = 0;
@@ -1145,10 +1151,12 @@ void FixedwingAttitudeControl::update_pi(float phi, float theta)
 // KiteX: Run when the turning radius changes
 void FixedwingAttitudeControl::update_pi_path(float radius)
 {
+
 	float offset = (float) M_PI_2; // index 0 at bottom of circle
-	for (int i = 0; i < 60; i++) {
-		float rho = i*2*M_PI/60;
-		_pi_path_x[i] = radius*cosf(rho + offset);
+	const int  res = (int)  _parameters.resolution;
+	for (int i = 0; i < res; i++) {
+		 float rho = i*2*M_PI/ res;
+		_pi_path_x[i] =  radius*cosf(rho + offset);
 		_pi_path_y[i] = -radius*sinf(rho + offset);
 	}
 }
@@ -1160,7 +1168,6 @@ void FixedwingAttitudeControl::update_pi_projection()
 	_pos_pi(0) = relative_pos*_parameters.e_pi_x;
 	_pos_pi(1) = relative_pos*_parameters.e_pi_y;
 
-	// PX4_INFO("Kite pos: %.2f, %.2f", (double) _pos_pi(0), (double) _pos_pi(1));
 
 	_vel_pi(0) = _vel*_parameters.e_pi_x;
 	_vel_pi(1) = _vel*_parameters.e_pi_y;
@@ -1169,9 +1176,10 @@ void FixedwingAttitudeControl::update_pi_projection()
 void FixedwingAttitudeControl::update_pi_target_point(float search_radius)
 {
 	int index = _pi_path_i;
+	const int  res = (int)  _parameters.resolution;
 
 	while ((double) square_distance_to_path(index) < pow(search_radius, 2)) {
-		index = (index + 1) % 60;
+		index = (index + 1) % res;
 	}
 
 	_pi_path_i = index;

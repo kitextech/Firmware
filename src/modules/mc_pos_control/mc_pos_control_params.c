@@ -52,6 +52,9 @@
  PARAM_DEFINE_FLOAT(MPC_PHI_C, 0f);
  PARAM_DEFINE_FLOAT(MPC_THETA_C, 0.0f);
 
+ PARAM_DEFINE_INT32(MPC_RESOLUTION, 60); // maximum 60 points
+
+
  /**
   * KITEX Turning radius in the Pi-plane
   * *

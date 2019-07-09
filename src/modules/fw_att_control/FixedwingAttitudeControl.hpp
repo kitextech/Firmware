@@ -159,6 +159,7 @@ private:
 		float phiC;
 		float thetaC;
 		float turning_radius;
+	  int32_t resolution;
 		// Kitex end
 
 		float p_tc;
@@ -234,6 +235,7 @@ private:
 		param_t phiC;
 		param_t thetaC;
 		param_t turning_radius;
+    param_t resolution;
 		param_t x_pos_b;
 		param_t y_pos_b;
 		param_t z_pos_b;
@@ -312,6 +314,7 @@ private:
 
 	float _pi_path_x[60]; // KiteX: x-coords of path points
 	float _pi_path_y[60]; // KiteX: y-coords of path points
+
 	int _pi_path_i = 0;   // KiteX: Path of kite in Pi plane
 
 	matrix::Vector<float, 2> _pos_pi; // KiteX: Projected position in Pi
