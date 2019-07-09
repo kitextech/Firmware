@@ -1160,6 +1160,8 @@ void FixedwingAttitudeControl::update_pi_projection()
 	_pos_pi(0) = relative_pos*_parameters.e_pi_x;
 	_pos_pi(1) = relative_pos*_parameters.e_pi_y;
 
+	// PX4_INFO("Kite pos: %.2f, %.2f", (double) _pos_pi(0), (double) _pos_pi(1));
+
 	_vel_pi(0) = _vel*_parameters.e_pi_x;
 	_vel_pi(1) = _vel*_parameters.e_pi_y;
 }
@@ -1175,7 +1177,7 @@ void FixedwingAttitudeControl::update_pi_target_point(float search_radius)
 	_pi_path_i = index;
 	_target_point_pi(0) = _pi_path_x[_pi_path_i];
 	_target_point_pi(1) = _pi_path_y[_pi_path_i];
-	printf("Target point: (%.2f, %.2f) \n", (double) _target_point_pi(0), (double) _target_point_pi(1));
+	// printf("Target point: (%.2f, %.2f) \n", (double) _target_point_pi(0), (double) _target_point_pi(1));
 }
 
 void FixedwingAttitudeControl::update_pi_arc()

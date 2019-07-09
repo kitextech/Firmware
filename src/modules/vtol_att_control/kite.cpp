@@ -378,7 +378,7 @@ void Kite::update_fw_state()
 
 float Kite::elevator_correction()
 {
-	return 1.6f * (1.0f - math::constrain(_airspeed_ratio , 0.0f, 1.0f));
+	return 1.7f * (1.0f - math::constrain(_airspeed_ratio , 0.0f, 1.0f));
 }
 
 /**
@@ -445,8 +445,8 @@ void Kite::fill_actuator_outputs()
 	//	_actuators_fw_in->control[actuator_controls_s::INDEX_ROLL] * (1 - _mc_roll_weight);
 	} else{
 		// pitch
-		_actuators_out_1->control[actuator_controls_s::INDEX_PITCH] = 0.6f
-		+ _actuators_fw_in->control[actuator_controls_s::INDEX_PITCH]
+		_actuators_out_1->control[actuator_controls_s::INDEX_PITCH] = 0.7f
+		// + _actuators_fw_in->control[actuator_controls_s::INDEX_PITCH]
 		- elevator_correction();
 		// roll
 		_actuators_out_1->control[actuator_controls_s::INDEX_ROLL] =

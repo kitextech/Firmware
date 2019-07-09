@@ -212,14 +212,6 @@ Kitex variables for declearation of rudder and elevator and its switch
 // THERE IS NO BOOL TYPE PARAMETER SO INSTEAD OF DEFINING THE BOOL TYPE FOR Switchig BETWEEN ON AND OFF
 // WE HAVE 1 AND 0 IN THE FORMAT OF INT32
 
-PARAM_DEFINE_INT32(ELEVON_OVERIDE, 0);
-
-PARAM_DEFINE_FLOAT(RUDDER_STATE, 0.0f);
-
-PARAM_DEFINE_FLOAT(ELEVATOR_STATE, 0.0f);
-
-
-
 /**
  * Transition backwards to MC mode thrust target
  *

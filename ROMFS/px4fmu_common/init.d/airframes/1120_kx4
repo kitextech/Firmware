@@ -37,6 +37,16 @@ then
 	param set RTL_DESCEND_ALT 10.0
 	param set RTL_LAND_DELAY 0
   param set V19_VT_ROLLDIR 0
+
+  param set ELEVON_OVERIDE 0
+  param set ELEVATOR_STATE 
+
+  #  rudder and elevator values that we always need, add them here too! Not just init posix
+
+  # Test. If it works, make another file with the calibration values
+  param set CAL_ACC0_XOFF	2.039332389831542969
+
+
 fi
 # This is special kitex VTOL ( from now it has to be always 22)
 set MAV_TYPE 22

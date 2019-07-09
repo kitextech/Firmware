@@ -56,7 +56,7 @@ set(models none shell
 	plane
 	standard_vtol tailsitter tiltrotor
 	hippocampus rover
-	kx4_vtol kx4_with_tether) # Kitex
+	kx4_vtol kx4_with_tether flightpath) # Kitex
 set(all_posix_vmd_make_targets)
 foreach(viewer ${viewers})
 	foreach(debugger ${debuggers})
