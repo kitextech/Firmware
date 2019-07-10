@@ -427,7 +427,7 @@ void Kite::fill_actuator_outputs()
 	// throttle
 	_actuators_out_0->control[actuator_controls_s::INDEX_THROTTLE] =
                 (_vtol_schedule.flight_mode == FW_MODE)
-                        ? 1.0f :	// Kitex: Added ternary to give full throttle instead of mc_throttle
+                        ? 0.85f :	// Kitex: Added ternary to give high throttle instead of mc_throttle
                          _actuators_mc_in->control[actuator_controls_s::INDEX_THROTTLE];
 
 	// Fixed wing controls

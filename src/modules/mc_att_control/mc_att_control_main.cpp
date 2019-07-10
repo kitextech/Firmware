@@ -256,7 +256,6 @@ MulticopterAttitudeControl::vehicle_status_poll()
 
 				int32_t vt_type = -1;
 				// Kitex begin
-				printf("LET US BUILD SOMETHING \n");
 				if (param_get(param_find("VT_TYPE"), &vt_type) == PX4_OK) {
 					if (vt_type == vtol_type::TAILSITTER ||
 							vt_type == vtol_type::KITE ||
