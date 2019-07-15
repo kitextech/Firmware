@@ -49,10 +49,12 @@
 #include <poll.h>
 #include <string.h>
 #include <math.h>
+#include <drivers/drv_hrt.h>
 
 #include <uORB/uORB.h>
 #include <uORB/topics/adc_report.h>
 #include <uORB/topics/debug_key_value.h>
+#include <uORB/topics/bcm_status.h>
 
 extern "C" __EXPORT int adc_monitor_main(int argc, char *argv[]);
 
@@ -115,6 +117,10 @@ void AdcMonitor::task_main()
 	strncpy(dbg.key, "bcm_temp", 10);
 	orb_advert_t dbg_pub_fd = orb_advertise(ORB_ID(debug_key_value), &dbg);
 
+	struct bcm_status_s bcm;
+	memset(&bcm, 0, sizeof(bcm));
+	orb_advert_t bcm_pub_fd = orb_advertise(ORB_ID(bcm_status), &bcm);
+
 	// /* one could wait for multiple topics with this technique, just using one here */
 	px4_pollfd_struct_t fds[1] = {};
 	fds[0].fd = adc_sub_fd;
@@ -150,7 +156,10 @@ void AdcMonitor::task_main()
 				double temp = temp_calc((double)adc.channel_value[10]);
 				PX4_INFO("Temperature:\t%8.4f", temp);
 				dbg.value = temp;
+				bcm.timestamp = hrt_absolute_time();
+				bcm.bcm_temperature = temp;
 				orb_publish(ORB_ID(debug_key_value), dbg_pub_fd, &dbg);
+				orb_publish(ORB_ID(bcm_status), bcm_pub_fd, &bcm);
 				usleep(100);
 
 			}

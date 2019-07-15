@@ -658,6 +658,7 @@ void Logger::add_default_topics()
 	add_topic("vehicle_status_flags");
 	add_topic("vtol_vehicle_status", 200);
 	add_topic("wind_estimate", 200);
+	add_topic("bcm_status", 250); //kitex
 
 #ifdef CONFIG_ARCH_BOARD_PX4_SITL
 	add_topic("actuator_controls_virtual_fw");

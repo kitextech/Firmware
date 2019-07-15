@@ -41,6 +41,7 @@ set(msg_files
 	adc_report.msg
 	airspeed.msg
 	battery_status.msg
+	bcm_status.msg # kitex
 	camera_capture.msg
 	camera_trigger.msg
 	collision_report.msg
