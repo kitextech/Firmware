@@ -30,3 +30,5 @@ fi
 
 # KiteX BCM temperature monitor
 adc_monitor start
+# Kitex Controller setpoints tracker
+pid_tune start

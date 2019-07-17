@@ -19,7 +19,7 @@ then
   param set MC_PITCH_C_EN	0
   param set MC_PITCH_C -0.26
   # kite.cpp heading correction
-  param set VT_WIND_SPEED 0
+  param set VT_WIND_SPEED 4
 
 	param set MIS_TAKEOFF_ALT 30
   # number of the motors of the VTOL
@@ -35,9 +35,8 @@ then
   param set MPC_LOOP_TURN_R 20
   param set MPC_PHI_C 0.785
   param set MPC_THETA_C 0.5
-  param set MPC_SPHERE_EN 1 # The sphere implmentation does not currently work
+  param set MPC_SPHERE_EN 0 # The sphere implmentation does not currently work
   param set MPC_RESOLUTION 60
-
   # Stop PX4 fw_att_control and run KiteX fw_att_control
   # fw_att_control stop
   # kite_att_control start

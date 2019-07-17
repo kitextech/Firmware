@@ -3953,10 +3953,11 @@ protected:
 		struct debug_array_s debug = {};
 
 		if (_debug_array_sub->update(&_debug_time, &debug)) {
+
 			mavlink_debug_float_array_t msg = {};
 
 			msg.time_usec = debug.timestamp;
-			msg.array_id = debug.id;
+			msg.array_id =  debug.id;
 			memcpy(msg.name, debug.name, sizeof(msg.name));
 			/* enforce null termination */
 			msg.name[sizeof(msg.name) - 1] = '\0';

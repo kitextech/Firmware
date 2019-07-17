@@ -89,7 +89,8 @@ px4_add_board(
 		vtol_att_control
 		wind_estimator
 		adc_monitor	# Kitex
-
+		pid_tune    # Kitex
+		
 	SYSTEMCMDS
 		bl_update
 		config
