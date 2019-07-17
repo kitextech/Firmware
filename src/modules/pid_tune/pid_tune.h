@@ -35,7 +35,9 @@
  * @file hello_example.h
  * Example app for Linux
  *
- * @author Bertalan Kovács <bertalan@kitex.tech>
+ * @author Bertalan Kovács  <bertalan@kitex.tech>
+ * @author Mohammad Hossein Kazenu <mohammad@kitex.tech>
+
  */
 
 #pragma once

@@ -37,6 +37,7 @@
  * Example for Linux
  *
  * @author Bertalan Kovács <bertalan@kitex.tech>
+ * @author Mohammad Hossein Kazemi <mohammad@kitex.tech>
  */
 
 #include "pid_tune.h"
@@ -49,7 +50,8 @@
 #include <poll.h>
 #include <string.h>
 #include <math.h>
-
+// required library for the clock
+#include <drivers/drv_hrt.h>
 #include <uORB/uORB.h>
 // for reading the setpoints of the att of the vehicle
 #include <uORB/topics/vehicle_attitude_setpoint.h>
@@ -106,14 +108,13 @@ void PID_TUNE::task_main()
 	int pid_sub_fd = orb_subscribe(ORB_ID(vehicle_attitude_setpoint));
 
 	/* limit the update rate to 10 Hz */
-	// orb_set_interval(pid_sub_fd, 100);
+	//orb_set_interval(pid_sub_fd, 100);
 
 	struct debug_array_s dbg;
 
 	// reset the debug value
 	dbg.id = 1;
 	strncpy(dbg.name, "dbg_array", 10);
-
 	// assign a name to the dbg_roll key
 	// strncpy(dbg_roll.key, "_roll_s", 10);
 	// strncpy(dbg_pitch.key, "_pitch_s", 10);
@@ -156,7 +157,8 @@ void PID_TUNE::task_main()
 				struct vehicle_attitude_setpoint_s pid_sp;
 
 				orb_copy(ORB_ID(vehicle_attitude_setpoint), pid_sub_fd, &pid_sp);
-
+        // read the realtime timestamp
+				dbg.timestamp = hrt_absolute_time();
 				// read roll and pitch setpoints
 				dbg.data[0]  = pid_sp.roll_body;
 				dbg.data[1]  = pid_sp.pitch_body;

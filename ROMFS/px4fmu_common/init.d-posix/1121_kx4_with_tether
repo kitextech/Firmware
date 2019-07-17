@@ -46,3 +46,6 @@ set MAV_TYPE 22
 # kitex special H configuration for the mixer
 set MIXER_FILE etc/mixers-sitl/kx4_with_tether.main.mix
 set MIXER custom
+
+# Kitex setpoints tracker
+pid_tune start
