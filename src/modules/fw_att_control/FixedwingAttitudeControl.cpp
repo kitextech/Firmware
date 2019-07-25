@@ -915,14 +915,16 @@ void FixedwingAttitudeControl::run()
 
 					_rates_sp.timestamp = hrt_absolute_time();
 
-					if (_rate_sp_pub != nullptr) {
-						/* publish the attitude rates setpoint */
-						orb_publish(ORB_ID(vehicle_rates_setpoint), _rate_sp_pub, &_rates_sp);
 
-					} else {
-						/* advertise the attitude rates setpoint */
-						_rate_sp_pub = orb_advertise(ORB_ID(vehicle_rates_setpoint), &_rates_sp);
-					}
+					// KITEX REMOVE PUBLISH
+					// if (_rate_sp_pub != nullptr) {
+					// 	/* publish the attitude rates setpoint */
+					// 	orb_publish(ORB_ID(vehicle_rates_setpoint), _rate_sp_pub, &_rates_sp);
+					//
+					// } else {
+					// 	/* advertise the attitude rates setpoint */
+					// 	_rate_sp_pub = orb_advertise(ORB_ID(vehicle_rates_setpoint), &_rates_sp);
+					// }
 
 				// Kitex begin. Pure rate control
 				// } else {
