@@ -6,6 +6,8 @@
 #
 
 sh /etc/init.d/rc.vtol_defaults
+# controller updated gaines
+sh /etc/init.d-posix/1120_kx4_control_params
 
 if [ $AUTOCNF = yes ]
 then
@@ -14,6 +16,10 @@ then
 	# param set MC_ROLL_P 6
 	param set MC_ROLLRATE_P 0.3
   param set MC_YAW_EN 0     # With tether, we don't want to have yaw control by default
+  param set MC_PITCH_C_EN	1 # Set this value to 1 to enable the fixed pitch in the takeoff phase
+  param set MC_PITCH_C -0.26
+  # kite.cpp heading correction
+  param set VT_WIND_SPEED 4
 
 	param set MIS_TAKEOFF_ALT 30
   # number of the motors of the VTOL
@@ -31,7 +37,6 @@ then
   param set MPC_THETA_C 0.5
   param set MPC_SPHERE_EN 0 # The sphere implmentation does not currently work
   param set MPC_RESOLUTION 60
-
   # Stop PX4 fw_att_control and run KiteX fw_att_control
   # fw_att_control stop
   # kite_att_control start
@@ -41,3 +46,6 @@ set MAV_TYPE 22
 # kitex special H configuration for the mixer
 set MIXER_FILE etc/mixers-sitl/kx4_with_tether.main.mix
 set MIXER custom
+
+# Kitex setpoints tracker
+pid_tune start

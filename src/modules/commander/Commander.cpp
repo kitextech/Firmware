@@ -434,9 +434,18 @@ int commander_main(int argc, char *argv[])
 		bool ret = send_vehicle_command(vehicle_command_s::VEHICLE_CMD_DO_VTOL_TRANSITION,
 						(float)(status.is_rotary_wing ? vtol_vehicle_status_s::VEHICLE_VTOL_STATE_FW :
 							vtol_vehicle_status_s::VEHICLE_VTOL_STATE_MC));
-
 		return (ret ? 0 : 1);
 	}
+
+	// Kitex begin. Stop transition
+	if (!strcmp(argv[1], "transition_s")) {
+
+		bool ret = send_vehicle_command(vehicle_command_s::VEHICLE_CMD_DO_VTOL_TRANSITION,
+						(float) vtol_vehicle_status_s::VEHICLE_VTOL_STATE_MC);
+		return (ret ? 0 : 1);
+	}
+
+	// Kitex end
 
 	if (!strcmp(argv[1], "mode")) {
 		if (argc > 2) {
@@ -519,7 +528,7 @@ void usage(const char *reason)
 		PX4_INFO("%s", reason);
 	}
 
-	PX4_INFO("usage: commander {start|stop|status|calibrate|check|arm|disarm|takeoff|land|transition|mode}\n");
+	PX4_INFO("usage: commander {start|stop|status|calibrate|check|arm|disarm|takeoff|land|transition|mode|transition_s}\n");	// Kitex, added command to stop transition
 }
 
 void print_status()
